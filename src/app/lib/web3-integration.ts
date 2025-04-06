@@ -8,13 +8,12 @@ import { toast } from 'react-hot-toast';
  */
 class Web3IntegrationService {
   private currentAddress: string | null = null;
-  private readonly ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0x6E5ceE75158A189939F6d945351dBD86370672AD';
+  private readonly ADMIN_ADDRESS = process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0x3B450450F4049B9c29C83Db8265286823c1A47a7';
   private readonly DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true';
   
   /**
    * Initialize both web3 and API services
    * Set the current user address for blockchain interactions
-   * Set the admin address for API interactions
    */
   async initialize(): Promise<boolean> {
     try {
@@ -24,9 +23,6 @@ class Web3IntegrationService {
       if (connected && web3Service.signer) {
         // Get the current address
         this.currentAddress = await web3Service.signer.getAddress();
-        
-        // Always use the admin address from environment variable for API calls
-        apiService.setAdminAddress(this.ADMIN_ADDRESS);
         
         // Check health of the API
         await this.checkApiHealth();
@@ -113,9 +109,6 @@ class Web3IntegrationService {
    */
   async verifyVoter(voterAddress: string, notes: string = ''): Promise<boolean> {
     try {
-      // Always use the admin address from environment variable
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       // Check if web3 is initialized, if not, skip blockchain verification
       let blockchainResult = true;
       if (web3Service.contract) {
@@ -157,9 +150,6 @@ class Web3IntegrationService {
    */
   async scheduleElection(name: string, startTime: number, endTime: number): Promise<boolean> {
     try {
-      // Always use the admin address from environment variable
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       // Schedule on blockchain
       const result = await web3Service.scheduleElection(name, startTime, endTime);
       
@@ -182,9 +172,6 @@ class Web3IntegrationService {
    */
   async addCandidate(electionId: number, name: string, info: string): Promise<boolean> {
     try {
-      // Always use the admin address from environment variable
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       // Add candidate on blockchain
       const result = await web3Service.addCandidate(electionId, name, info);
       
@@ -221,10 +208,6 @@ class Web3IntegrationService {
    */
   async getAdminStats() {
     try {
-      // Remove the isUserAdmin check, as we want to use the admin address directly
-      // Instead, ensure the admin address is set for this API call
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       return await apiService.getAdminStats();
     } catch (error) {
       console.error('Error getting admin stats:', error);
@@ -238,10 +221,6 @@ class Web3IntegrationService {
    */
   async listVoters(options = {}) {
     try {
-      // Remove the isUserAdmin check, as we want to use the admin address directly
-      // Instead, ensure the admin address is set for this API call
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       return await apiService.listVoters(options);
     } catch (error) {
       console.error('Error listing voters:', error);
@@ -255,9 +234,6 @@ class Web3IntegrationService {
    */
   async getAdminLogs(options = {}) {
     try {
-      // Ensure the admin address is set for API calls
-      apiService.setAdminAddress(this.ADMIN_ADDRESS);
-      
       return await apiService.getAdminLogs(options);
     } catch (error) {
       console.error('Error getting admin logs:', error);
@@ -277,7 +253,7 @@ class Web3IntegrationService {
    * Get the admin address
    */
   getAdminAddress(): string {
-    return this.DEV_MODE && this.currentAddress ? this.currentAddress : this.ADMIN_ADDRESS;
+    return this.ADMIN_ADDRESS;
   }
   
   /**

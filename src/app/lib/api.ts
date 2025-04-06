@@ -79,29 +79,23 @@ export type AdminStats = {
  * API service for making HTTP requests to the backend
  */
 class ApiService {
-  private adminAddress: string | null = null;
-  
   /**
-   * Set the admin address for making administrative API calls
-   * This address will be included in the headers for admin endpoints
+   * Get the admin address directly from environment variables
    */
-  setAdminAddress(address: string): void {
-    this.adminAddress = address;
+  getAdminAddress(): string {
+    // Always return the exact value from environment variable
+    return process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '0x3B450450F4049B9c29C83Db8265286823c1A47a7';
   }
   
   /**
    * Get the headers for an API request
-   * If an admin request, includes the admin address
+   * Always includes the admin address from environment variables
    */
-  private getHeaders(isAdminRequest: boolean = false): Record<string, string> {
+  private getHeaders(): Record<string, string> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'x-admin-address': this.getAdminAddress()
     };
-    
-    if (isAdminRequest && this.adminAddress) {
-      // Use the correct header format as specified in the API docs
-      headers['x-admin-address'] = this.adminAddress;
-    }
     
     return headers;
   }
@@ -111,7 +105,7 @@ class ApiService {
    */
   private getRequestConfig(isAdminRequest: boolean = false) {
     return {
-      headers: this.getHeaders(isAdminRequest),
+      headers: this.getHeaders(),
       withCredentials: false, // Set to true if your API requires cookies
     };
   }
@@ -121,15 +115,14 @@ class ApiService {
    */
   async healthCheck() {
     try {
-      const url = `${API_URL}/health`;
-      logAPI('GET', url);
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/health`;
       
-      const response = await axios.get(url, this.getRequestConfig());
-      logAPI('GET', url, null, response.data);
+      const response = await axios.get(url, {
+        headers: this.getHeaders()
+      });
       
       return response.data;
     } catch (error) {
-      logAPI('GET', `${API_URL}/health`, null, null, error);
       console.error('Health check failed:', error);
       return { status: 'error', services: { blockchain: false, database: false } };
     }
@@ -172,26 +165,19 @@ class ApiService {
       const url = 'http://localhost:5000/api/voters/verify';
       
       console.log("Making verify request to:", url);
-      console.log("With admin address:", this.adminAddress);
-      
-      if (!this.adminAddress) {
-        throw new Error("Admin address not set. Cannot verify voter.");
-      }
+      console.log("With admin address:", this.getAdminAddress());
       
       // Match the exact JSON structure from Postman
       const data = {
-        adminAddress: this.adminAddress,
+        adminAddress: this.getAdminAddress(),
         voterAddress: voterAddress,
         verificationNotes: verificationNotes || "Verified manually after document check"
       };
       
       console.log("Request data:", data);
       
-      // Include admin address in headers as well
-      const headers = {
-        'x-admin-address': this.adminAddress,
-        'Content-Type': 'application/json'
-      };
+      // Include admin address in headers
+      const headers = this.getHeaders();
       
       console.log("Using headers:", headers);
       
@@ -254,11 +240,9 @@ class ApiService {
       const url = `http://localhost:5000/api/admin/voters${queryString}`;
       
       console.log("Making API request to:", url);
-      console.log("With admin address:", this.adminAddress);
+      console.log("With admin address:", this.getAdminAddress());
       
-      const headers = {
-        'x-admin-address': this.adminAddress || ''
-      };
+      const headers = this.getHeaders();
       
       console.log("Using headers:", headers);
       
@@ -286,17 +270,10 @@ class ApiService {
       const url = 'http://localhost:5000/api/admin/stats';
       
       console.log("Making API request to:", url);
-      console.log("With admin address:", this.adminAddress);
-      
-      if (!this.adminAddress) {
-        throw new Error("Admin address not set. Cannot fetch admin stats.");
-      }
+      console.log("With admin address:", this.getAdminAddress());
       
       // Include admin address in headers
-      const headers = {
-        'x-admin-address': this.adminAddress,
-        'Content-Type': 'application/json'
-      };
+      const headers = this.getHeaders();
       
       console.log("Using headers:", headers);
       
@@ -334,17 +311,10 @@ class ApiService {
       const url = `http://localhost:5000/api/admin/logs${queryString}`;
       
       console.log("Making API request to:", url);
-      console.log("With admin address:", this.adminAddress);
-      
-      if (!this.adminAddress) {
-        throw new Error("Admin address not set. Cannot fetch admin logs.");
-      }
+      console.log("With admin address:", this.getAdminAddress());
       
       // Include admin address in headers
-      const headers = {
-        'x-admin-address': this.adminAddress,
-        'Content-Type': 'application/json'
-      };
+      const headers = this.getHeaders();
       
       console.log("Using headers:", headers);
       
