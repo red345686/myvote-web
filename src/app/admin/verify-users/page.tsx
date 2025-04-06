@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { web3Integration } from '../../lib/web3-integration';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -22,26 +22,49 @@ export default function VerifyUsers() {
   const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showVerifiedSuccess, setShowVerifiedSuccess] = useState<string | null>(null);
-  const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalVoters, setTotalVoters] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isVerifyingUser, setIsVerifyingUser] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isDevMode, setIsDevMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
+  // Define loadUsers function first, before it's used in useEffect
+  const loadUsers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await web3Integration.listVoters({ 
+        page: currentPage, 
+        limit: 10, 
+        verified: false 
+      });
+      
+      setUsers(response.voters);
+      setTotalPages(response.totalPages);
+      setTotalVoters(response.totalVoters);
+      setCurrentPage(response.currentPage);
+      setIsLoading(false);
+    } catch (error: unknown) {
+      console.error('Error loading users:', error);
+      setError('Failed to load unverified users');
+      setIsLoading(false);
+    }
+  }, [currentPage]);
+  
+  // Load users when the page loads
   useEffect(() => {
     const initWeb3 = async () => {
       const connected = await web3Integration.initialize();
       setIsConnected(connected);
       
       if (connected) {
-        // Check if current wallet is admin (just for the UI indicator)
         setIsAdmin(web3Integration.isAdmin());
         setIsDevMode(web3Integration.isDevMode());
         
-        // Always load users regardless of admin status
+        // Load users
         loadUsers();
       } else {
         setLoading(false);
@@ -52,42 +75,10 @@ export default function VerifyUsers() {
     setTimeout(() => {
       initWeb3();
     }, 800);
-  }, []);
-  
-  const loadUsers = async (page = 1, search = searchTerm) => {
-    setLoading(true);
-    try {
-      const response = await web3Integration.listVoters({
-        page,
-        limit: 10,
-        search
-      });
-      
-      if (response && response.voters) {
-        // Map the API response to our User type
-        setUsers(response.voters.map((voter: any) => ({
-          id: voter.blockchainAddress,
-          name: voter.rawData?.name || 'Unknown',
-          isVerified: voter.isVerified || false,
-          district: voter.district,
-          dob: voter.dob,
-          aadharImage: voter.aadharImage,
-          gender: voter.encryptedData?.gender || 'Unknown'
-        })));
-        
-        setTotalPages(response.pagination.pages || 1);
-        setTotalVoters(response.pagination.total || 0);
-        setCurrentPage(page);
-      }
-    } catch (error) {
-      console.error('Error loading users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [loadUsers]); // Add loadUsers to dependency array
   
   const handleVerifyUser = async (userId: string, userName: string) => {
-    setVerifyingUserId(userId);
+    setIsVerifyingUser(true);
     try {
       const success = await web3Integration.verifyVoter(userId, `Verified by admin on ${new Date().toISOString()}`);
       
@@ -97,17 +88,15 @@ export default function VerifyUsers() {
           user.id === userId ? { ...user, isVerified: true } : user
         ));
         
-        setShowVerifiedSuccess(userName);
-        
         // Hide success message after 3 seconds
         setTimeout(() => {
-          setShowVerifiedSuccess(null);
+          setIsVerifyingUser(false);
         }, 3000);
       }
     } catch (error) {
       console.error('Error verifying user:', error);
     } finally {
-      setVerifyingUserId(null);
+      setIsVerifyingUser(false);
     }
   };
   
@@ -117,7 +106,7 @@ export default function VerifyUsers() {
     
     // Debounce search - wait 500ms after typing stops
     const handler = setTimeout(() => {
-      loadUsers(1, value);
+      loadUsers();
     }, 500);
     
     return () => {
@@ -127,7 +116,7 @@ export default function VerifyUsers() {
   
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
-    loadUsers(page);
+    loadUsers();
   };
 
   return (
@@ -218,26 +207,6 @@ export default function VerifyUsers() {
             <div className="ml-3">
               <p className="text-sm text-purple-700">
                 <strong>Development Mode Active:</strong> Your current wallet ({web3Integration.getCurrentAddress()?.substring(0, 8)}...) is being used as the admin address.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {showVerifiedSuccess && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="bg-green-50 border-l-4 border-green-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <CheckCircleIcon className="h-5 w-5 text-green-400" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                <strong>{showVerifiedSuccess}</strong> has been successfully verified!
               </p>
             </div>
           </div>
@@ -390,10 +359,10 @@ export default function VerifyUsers() {
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                               onClick={() => handleVerifyUser(user.id, user.name)}
-                              disabled={verifyingUserId === user.id}
+                              disabled={isVerifyingUser}
                               className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
-                              {verifyingUserId === user.id ? (
+                              {isVerifyingUser ? (
                                 <>
                                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -506,7 +475,7 @@ export default function VerifyUsers() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => loadUsers(1)}
+                  onClick={() => loadUsers()}
                   className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

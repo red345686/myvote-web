@@ -1,40 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { web3Integration } from '../../lib/web3-integration';
+import { web3Integration } from '@/app/lib/web3-integration';
 import { motion } from 'framer-motion';
 import { ClockIcon, ArrowLeftCircleIcon, ArrowRightCircleIcon } from '@heroicons/react/24/outline';
 import { apiService } from '../../lib/api';
 
-// Types for the logs
-type LogEntry = {
-  _id: string;
-  adminAddress: string;
-  action: string;
-  description: string;
-  targetAddress?: string;
-  transactionHash?: string;
-  status: 'SUCCESS' | 'FAILURE';
+// Define interfaces for log data
+interface LogEntry {
   timestamp: string;
-  ipAddress: string;
-  metadata?: {
-    message: string;
-    [key: string]: any;
-  };
-  createdAt: string;
-  updatedAt: string;
-};
+  level: string;
+  message: string;
+  userId?: string;
+  action?: string;
+  details?: Record<string, unknown>;
+}
 
-type Pagination = {
-  total: number;
-  page: number;
-  pages: number;
-};
-
-type LogsResponse = {
+interface LogsResponse {
   logs: LogEntry[];
-  pagination: Pagination;
-};
+  totalLogs: number;
+  page: number;
+  totalPages: number;
+}
 
 const actionColors = {
   VERIFY_VOTER: 'bg-green-100 text-green-800',
@@ -49,7 +36,12 @@ export default function AdminLogs() {
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, pages: 1 });
+  const [pagination, setPagination] = useState<LogsResponse>({ 
+    logs: [],
+    totalLogs: 0, 
+    page: 1, 
+    totalPages: 1 
+  });
   const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -65,7 +57,7 @@ export default function AdminLogs() {
       
       if (connected) {
         setIsAdmin(web3Integration.isAdmin());
-        loadLogs(1);
+        loadLogs(currentPage);
       } else {
         setLoading(false);
       }
@@ -74,13 +66,13 @@ export default function AdminLogs() {
     setTimeout(() => {
       initWeb3();
     }, 800);
-  }, []);
+  }, [currentPage]);
 
   const loadLogs = async (page: number, actionFilter: string = action, statusFilter: string = status) => {
     try {
       setLoading(true);
       
-      const options: any = {
+      const options: Record<string, unknown> = {
         page,
         limit: 10
       };
@@ -90,14 +82,19 @@ export default function AdminLogs() {
       
       const response = await apiService.getAdminLogs(options);
       setLogs(response.logs || []);
-      setPagination(response.pagination || { total: 0, page: 1, pages: 1 });
+      setPagination(response);
       setCurrentPage(page);
       setError(null);
     } catch (err) {
       console.error('Error loading logs:', err);
       setError('Failed to load admin logs');
       setLogs([]);
-      setPagination({ total: 0, page: 1, pages: 1 });
+      setPagination({ 
+        logs: [],
+        totalLogs: 0, 
+        page: 1, 
+        totalPages: 1 
+      });
     } finally {
       setLoading(false);
     }
@@ -360,7 +357,7 @@ export default function AdminLogs() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {logs.map((log, index) => (
                       <motion.tr 
-                        key={log._id} 
+                        key={log.timestamp} 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -373,34 +370,24 @@ export default function AdminLogs() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="font-mono">{truncateAddress(log.adminAddress)}</span>
+                          <span className="font-mono">{truncateAddress(log.userId || '')}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)}`}>
-                            {log.action.replace(/_/g, ' ')}
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action || '')}`}>
+                            {log.action?.replace(/_/g, ' ') || 'Unknown Action'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="max-w-xs truncate" title={log.description}>
-                            {log.description}
+                          <div className="max-w-xs truncate" title={log.message}>
+                            {log.message}
                           </div>
-                          {log.targetAddress && (
-                            <div className="text-xs text-gray-400 mt-1">
-                              Target: <span className="font-mono">{truncateAddress(log.targetAddress)}</span>
-                            </div>
-                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            log.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            log.level === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
-                            {log.status}
+                            {log.level}
                           </span>
-                          {log.metadata?.message && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {log.metadata.message}
-                            </div>
-                          )}
                         </td>
                       </motion.tr>
                     ))}
@@ -409,13 +396,13 @@ export default function AdminLogs() {
               </div>
 
               {/* Pagination */}
-              {pagination.pages > 1 && (
+              {pagination.totalPages > 1 && (
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{((pagination.page - 1) * 10) + 1}</span> to <span className="font-medium">{Math.min(pagination.page * 10, pagination.total)}</span> of{' '}
-                        <span className="font-medium">{pagination.total}</span> results
+                        Showing <span className="font-medium">{((pagination.page - 1) * 10) + 1}</span> to <span className="font-medium">{Math.min(pagination.page * 10, pagination.totalLogs)}</span> of{' '}
+                        <span className="font-medium">{pagination.totalLogs}</span> results
                       </p>
                     </div>
                     <div>
@@ -429,14 +416,14 @@ export default function AdminLogs() {
                           <ArrowLeftCircleIcon className="h-5 w-5" aria-hidden="true" />
                         </button>
 
-                        {Array.from({ length: Math.min(5, pagination.pages) }).map((_, i) => {
+                        {Array.from({ length: Math.min(5, pagination.totalPages) }).map((_, i) => {
                           let pageNum;
-                          if (pagination.pages <= 5) {
+                          if (pagination.totalPages <= 5) {
                             pageNum = i + 1;
                           } else if (pagination.page <= 3) {
                             pageNum = i + 1;
-                          } else if (pagination.page >= pagination.pages - 2) {
-                            pageNum = pagination.pages - 4 + i;
+                          } else if (pagination.page >= pagination.totalPages - 2) {
+                            pageNum = pagination.totalPages - 4 + i;
                           } else {
                             pageNum = pagination.page - 2 + i;
                           }
@@ -458,7 +445,7 @@ export default function AdminLogs() {
 
                         <button
                           onClick={() => loadLogs(pagination.page + 1)}
-                          disabled={pagination.page === pagination.pages}
+                          disabled={pagination.page === pagination.totalPages}
                           className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Next</span>

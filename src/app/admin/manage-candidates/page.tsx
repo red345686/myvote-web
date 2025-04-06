@@ -1,19 +1,36 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { web3Service, Election, Candidate } from '../../lib/web3';
 import { useForm } from 'react-hook-form';
 import Link from 'next/link';
 import { UserPlusIcon, ArrowLeftIcon, CalendarIcon, IdentificationIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 type CandidateFormData = {
   name: string;
   info: string;
 };
 
-export default function ManageCandidates() {
+function LoadingState() {
+  return (
+    <div className="flex justify-center py-12">
+      <div className="text-center">
+        <div className="inline-block animate-spin-slow">
+          <svg className="w-16 h-16 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <p className="mt-4 text-gray-600 animate-pulse">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+function ManageCandidatesContent() {
   const searchParams = useSearchParams();
   const electionIdParam = searchParams.get('electionId');
   const [selectedElectionId, setSelectedElectionId] = useState<number | null>(
@@ -21,32 +38,44 @@ export default function ManageCandidates() {
   );
   
   const [isConnected, setIsConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [elections, setElections] = useState<Election[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [submitLoading, setSubmitLoading] = useState(false);
   
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CandidateFormData>();
   
-  useEffect(() => {
-    const initWeb3 = async () => {
+  const loadElections = useCallback(async () => {
+    setLoading(true);
+    try {
       const connected = await web3Service.initialize();
       setIsConnected(connected);
       
       if (connected) {
-        await loadElections();
-      } else {
-        setLoading(false);
+        const electionsList = await web3Service.getElections();
+        setElections(electionsList);
+        
+        if (electionsList.length > 0) {
+          setSelectedElectionId(electionsList[0].id);
+          await loadCandidates(electionsList[0].id);
+        }
       }
-    };
-    
-    // Add a small delay to show the loading animation
-    setTimeout(() => {
-      initWeb3();
-    }, 800);
+    } catch (error) {
+      console.error('Failed to load elections:', error);
+      toast.error('Failed to load elections');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+  
+  useEffect(() => {
+    // Load elections when the component mounts
+    loadElections();
+  }, [loadElections]);
   
   useEffect(() => {
     if (elections.length > 0 && selectedElectionId) {
@@ -57,20 +86,6 @@ export default function ManageCandidates() {
       }
     }
   }, [elections, selectedElectionId]);
-  
-  const loadElections = async () => {
-    setLoading(true);
-    const electionsData = await web3Service.getElections();
-    setElections(electionsData);
-    
-    if (electionsData.length > 0) {
-      if (!selectedElectionId) {
-        setSelectedElectionId(electionsData[0].id);
-      }
-    } else {
-      setLoading(false);
-    }
-  };
   
   const loadCandidates = async (electionId: number) => {
     setLoading(true);
@@ -83,7 +98,7 @@ export default function ManageCandidates() {
     if (!selectedElectionId) return;
     
     try {
-      setSubmitting(true);
+      setSubmitLoading(true);
       
       // Call blockchain method
       const result = await web3Service.addCandidate(
@@ -105,7 +120,7 @@ export default function ManageCandidates() {
     } catch (error) {
       console.error('Error adding candidate:', error);
     } finally {
-      setSubmitting(false);
+      setSubmitLoading(false);
     }
   };
   
@@ -308,7 +323,7 @@ export default function ManageCandidates() {
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.name ? 'border-red-500' : ''}`}
                     placeholder="e.g. John Doe"
                     {...register('name', { required: 'Candidate name is required' })}
-                    disabled={!isConnected || submitting}
+                    disabled={!isConnected || submitLoading}
                   />
                   {errors.name && (
                     <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
@@ -328,7 +343,7 @@ export default function ManageCandidates() {
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.info ? 'border-red-500' : ''}`}
                     placeholder="e.g. Party affiliation, background, etc."
                     {...register('info', { required: 'Candidate information is required' })}
-                    disabled={!isConnected || submitting}
+                    disabled={!isConnected || submitLoading}
                   />
                   {errors.info && (
                     <p className="mt-2 text-sm text-red-600">{errors.info.message}</p>
@@ -342,9 +357,9 @@ export default function ManageCandidates() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  disabled={!isConnected || submitting || Boolean(selectedElection && selectedElection.endTime < (Date.now() / 1000))}
+                  disabled={!isConnected || submitLoading || Boolean(selectedElection && selectedElection.endTime < (Date.now() / 1000))}
                 >
-                  {submitting ? (
+                  {submitLoading ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -462,5 +477,13 @@ export default function ManageCandidates() {
         </Link>
       </motion.div>
     </div>
+  );
+}
+
+export default function ManageCandidates() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ManageCandidatesContent />
+    </Suspense>
   );
 } 

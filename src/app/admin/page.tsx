@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { web3Integration } from '../lib/web3-integration';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { UsersIcon, CalendarIcon, ClockIcon, ChartBarIcon, LockClosedIcon, DocumentTextIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { Election } from '../lib/web3';
 import { Voter } from '../lib/api';
+import { AdminStats } from '../lib/api';
 
 type User = {
   id: string;
@@ -15,30 +16,38 @@ type User = {
 };
 
 export default function AdminDashboard() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [elections, setElections] = useState<Election[]>([]);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentAddress, setCurrentAddress] = useState<string | null>(null);
   
   useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Integration.initialize();
-      setIsConnected(connected);
-      
-      if (connected) {
-        setIsAdmin(web3Integration.isAdmin());
-        setCurrentAddress(web3Integration.getCurrentAddress());
-        loadDashboardData();
-      } else {
-        setLoading(false);
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const initialized = await web3Integration.initialize();
+        setIsInitialized(initialized);
+        
+        if (initialized) {
+          setIsAdmin(web3Integration.isAdmin());
+          setCurrentAddress(web3Integration.getCurrentAddress());
+          const stats = await web3Integration.getAdminStats();
+          setStats(stats);
+          loadDashboardData();
+        }
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    setTimeout(() => {
-      initWeb3();
-    }, 800);
+    fetchData();
   }, []);
   
   const loadDashboardData = async () => {
@@ -53,14 +62,12 @@ export default function AdminDashboard() {
     });
     
     if (usersData?.data) {
-      setPendingUsers(usersData.data.map(voter => ({
+      setPendingUsers(usersData.data.map((voter: any) => ({
         id: voter.blockchainAddress,
         name: voter.name,
         isVerified: voter.isVerified
       })));
     }
-    
-    setLoading(false);
   };
   
   const formatDate = (timestamp: number) => {
@@ -131,7 +138,7 @@ export default function AdminDashboard() {
         </p>
       </motion.div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center py-12">
           <div className="text-center">
             <div className="inline-block animate-spin-slow">
@@ -145,7 +152,7 @@ export default function AdminDashboard() {
         </div>
       ) : (
         <>
-          {!isConnected && (
+          {!isInitialized && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -167,7 +174,7 @@ export default function AdminDashboard() {
             </motion.div>
           )}
           
-          {isConnected && !isAdmin && (
+          {isInitialized && !isAdmin && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -192,7 +199,7 @@ export default function AdminDashboard() {
             </motion.div>
           )}
           
-          {isConnected && isAdmin && (
+          {isInitialized && isAdmin && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}

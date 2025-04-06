@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                   <CalendarDaysIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium text-gray-600">Today's Activity</p>
+                  <p className="mb-2 text-sm font-medium text-gray-600">Today&apos;s Activity</p>
                   <p className="text-lg font-semibold text-gray-700">
                     <span className="text-blue-500">+{stats.todayRegistrations}</span> / 
                     <span className="text-green-500 ml-1">+{stats.todayVerifications}</span>

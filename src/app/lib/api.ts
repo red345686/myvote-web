@@ -7,7 +7,13 @@ const API_LOG = process.env.NEXT_PUBLIC_API_LOG === 'true';
 /**
  * Helper function to log API requests and responses if enabled
  */
-function logAPI(method: string, url: string, data?: any, response?: any, error?: any) {
+function logAPI(
+  method: string, 
+  url: string, 
+  data?: Record<string, unknown>, 
+  response?: Record<string, unknown>, 
+  error?: Error
+): void {
   if (!API_LOG) return;
   
   const timestamp = new Date().toISOString();
@@ -103,7 +109,7 @@ class ApiService {
   /**
    * Get axios config for API requests
    */
-  private getRequestConfig(isAdminRequest: boolean = false) {
+  private getRequestConfig() {
     return {
       headers: this.getHeaders(),
       withCredentials: false, // Set to true if your API requires cookies
@@ -186,9 +192,9 @@ class ApiService {
       console.log("Verification response:", response.data);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("API Error:", error);
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
       }
@@ -251,9 +257,9 @@ class ApiService {
       console.log("Received response:", response.data);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("API Error:", error);
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
       }
@@ -282,9 +288,9 @@ class ApiService {
       console.log("Stats response:", response.data);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting admin stats:', error);
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
       }
@@ -323,9 +329,9 @@ class ApiService {
       console.log("Logs response:", response.data);
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error getting admin logs:', error);
-      if (error.response) {
+      if (axios.isAxiosError(error) && error.response) {
         console.error("Response data:", error.response.data);
         console.error("Response status:", error.response.status);
       }
@@ -340,7 +346,7 @@ class ApiService {
     try {
       const response = await axios.get(
         `${API_URL}/admin/stats/states`,
-        this.getRequestConfig(true)
+        this.getRequestConfig()
       );
       return response.data;
     } catch (error) {
@@ -356,7 +362,7 @@ class ApiService {
     try {
       const response = await axios.get(
         `${API_URL}/admin/stats/historical?days=${days}`,
-        this.getRequestConfig(true)
+        this.getRequestConfig()
       );
       return response.data;
     } catch (error) {
