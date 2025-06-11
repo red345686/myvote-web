@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { web3Integration } from '../../lib/web3-integration';
+import { adminService } from '../../lib/admin-service';
 import { motion } from 'framer-motion';
-import { 
-  WrenchIcon, 
-  CheckCircleIcon, 
+import {
+  WrenchIcon,
+  CheckCircleIcon,
   ExclamationCircleIcon,
   ArrowPathIcon,
   ShieldCheckIcon,
@@ -16,27 +16,23 @@ export default function AdminSettings() {
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [blockchainStatus, setBlockchainStatus] = useState<'connected' | 'disconnected'>('disconnected');
   const [apiStatus, setApiStatus] = useState<'connected' | 'disconnected'>('disconnected');
-  const [currentAddress, setCurrentAddress] = useState<string | null>(null);
-  const [adminAddress, setAdminAddress] = useState<string>('');
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
   const [devMode, setDevMode] = useState(false);
   const [apiUrl, setApiUrl] = useState<string>('');
   const [apiTestResult, setApiTestResult] = useState<string | null>(null);
   const [apiTesting, setApiTesting] = useState(false);
 
   useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Integration.initialize();
+    const initAdmin = async () => {
+      const connected = await adminService.initialize();
       setIsConnected(connected);
-      
+
       if (connected) {
-        setBlockchainStatus('connected');
-        setIsAdmin(web3Integration.isAdmin());
-        setCurrentAddress(web3Integration.getCurrentAddress());
-        setAdminAddress(web3Integration.getAdminAddress());
-        setDevMode(web3Integration.isDevMode());
-        
+        setAdminAuthenticated(true);
+        setIsAdmin(adminService.isAdmin());
+        setDevMode(adminService.isDevMode());
+
         // Check API connectivity
         try {
           const healthResult = await fetch('/api/health');
@@ -47,26 +43,26 @@ export default function AdminSettings() {
           console.error('API health check failed:', error);
           setApiStatus('disconnected');
         }
-        
+
         // Get API URL from environment
         setApiUrl(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
       }
-      
+
       setLoading(false);
     };
-    
+
     setTimeout(() => {
-      initWeb3();
+      initAdmin();
     }, 800);
   }, []);
 
   const testApiConnection = async () => {
     setApiTesting(true);
     setApiTestResult(null);
-    
+
     try {
       const response = await fetch(`${apiUrl}/health`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setApiStatus('connected');
@@ -83,18 +79,16 @@ export default function AdminSettings() {
     }
   };
 
-  const reconnectWallet = async () => {
+  const reconnect = async () => {
     setLoading(true);
-    const connected = await web3Integration.initialize();
+    const connected = await adminService.initialize();
     setIsConnected(connected);
-    
+
     if (connected) {
-      setBlockchainStatus('connected');
-      setIsAdmin(web3Integration.isAdmin());
-      setCurrentAddress(web3Integration.getCurrentAddress());
-      setAdminAddress(web3Integration.getAdminAddress());
+      setAdminAuthenticated(true);
+      setIsAdmin(adminService.isAdmin());
     }
-    
+
     setLoading(false);
   };
 
@@ -147,7 +141,7 @@ export default function AdminSettings() {
           </div>
         </motion.div>
       )}
-      
+
       {!isAdmin && isConnected && (
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -163,7 +157,7 @@ export default function AdminSettings() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-red-700">
-                Your current wallet address is not the admin wallet. Admin address: {adminAddress}
+                Your current wallet address is not the admin wallet. Admin address: {adminService.getAdminAddress()}
               </p>
             </div>
           </div>
@@ -200,11 +194,11 @@ export default function AdminSettings() {
               </p>
             </div>
             <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                <div className="sm:col-span-1">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 lg:grid-cols-2">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Connection Status</dt>
                   <dd className="mt-1 text-sm text-gray-900 flex items-center">
-                    {blockchainStatus === 'connected' ? (
+                    {apiStatus === 'connected' ? (
                       <>
                         <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2" />
                         Connected
@@ -217,19 +211,19 @@ export default function AdminSettings() {
                     )}
                   </dd>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Current Address</dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono overflow-hidden text-ellipsis">
-                    {currentAddress || 'Not connected'}
+                  <dd className="mt-1 text-sm text-gray-900 font-mono break-all">
+                    {adminService.getCurrentAddress() || 'Not connected'}
                   </dd>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Admin Address</dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono overflow-hidden text-ellipsis">
-                    {adminAddress || 'Not configured'}
+                  <dd className="mt-1 text-sm text-gray-900 font-mono break-all">
+                    {adminService.getAdminAddress() || 'Not configured'}
                   </dd>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Admin Status</dt>
                   <dd className="mt-1 text-sm text-gray-900 flex items-center">
                     {isAdmin ? (
@@ -245,10 +239,10 @@ export default function AdminSettings() {
                     )}
                   </dd>
                 </div>
-                <div className="sm:col-span-2 pt-2">
+                <div className="lg:col-span-2 pt-2">
                   <button
                     type="button"
-                    onClick={reconnectWallet}
+                    onClick={reconnect}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                   >
                     <ArrowPathIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
@@ -275,8 +269,8 @@ export default function AdminSettings() {
               </p>
             </div>
             <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                <div className="sm:col-span-1">
+              <dl className="grid grid-cols-1 gap-x-4 gap-y-6 lg:grid-cols-2">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">API Status</dt>
                   <dd className="mt-1 text-sm text-gray-900 flex items-center">
                     {apiStatus === 'connected' ? (
@@ -292,19 +286,19 @@ export default function AdminSettings() {
                     )}
                   </dd>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">API URL</dt>
-                  <dd className="mt-1 text-sm text-gray-900 font-mono overflow-hidden text-ellipsis">
+                  <dd className="mt-1 text-sm text-gray-900 font-mono break-all">
                     {apiUrl}
                   </dd>
                 </div>
-                <div className="sm:col-span-1">
+                <div className="lg:col-span-1">
                   <dt className="text-sm font-medium text-gray-500">Development Mode</dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     {devMode ? 'Enabled' : 'Disabled'}
                   </dd>
                 </div>
-                <div className="sm:col-span-2 pt-2">
+                <div className="lg:col-span-2 pt-2">
                   <button
                     type="button"
                     onClick={testApiConnection}
@@ -328,8 +322,8 @@ export default function AdminSettings() {
                   </button>
                 </div>
                 {apiTestResult && (
-                  <div className="sm:col-span-2 bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm font-mono whitespace-pre-wrap">{apiTestResult}</p>
+                  <div className="lg:col-span-2 bg-gray-50 p-3 rounded-md">
+                    <p className="text-sm font-mono whitespace-pre-wrap break-all">{apiTestResult}</p>
                   </div>
                 )}
               </dl>
@@ -357,21 +351,21 @@ export default function AdminSettings() {
                   The following environment variables are configured:
                 </p>
                 <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
-                  <li>
-                    <span className="font-mono font-medium">NEXT_PUBLIC_API_URL</span>: 
-                    <span className="ml-2 font-mono">{process.env.NEXT_PUBLIC_API_URL || '(not set)'}</span>
+                  <li className="break-words">
+                    <span className="font-mono font-medium">NEXT_PUBLIC_API_URL</span>:
+                    <span className="ml-2 font-mono break-all">{process.env.NEXT_PUBLIC_API_URL || '(not set)'}</span>
                   </li>
-                  <li>
-                    <span className="font-mono font-medium">NEXT_PUBLIC_ADMIN_ADDRESS</span>: 
-                    <span className="ml-2 font-mono">{process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '(not set)'}</span>
+                  <li className="break-words">
+                    <span className="font-mono font-medium">NEXT_PUBLIC_ADMIN_ADDRESS</span>:
+                    <span className="ml-2 font-mono break-all">{process.env.NEXT_PUBLIC_ADMIN_ADDRESS || '(not set)'}</span>
                   </li>
-                  <li>
-                    <span className="font-mono font-medium">NEXT_PUBLIC_DEV_MODE</span>: 
+                  <li className="break-words">
+                    <span className="font-mono font-medium">NEXT_PUBLIC_DEV_MODE</span>:
                     <span className="ml-2 font-mono">{process.env.NEXT_PUBLIC_DEV_MODE || '(not set)'}</span>
                   </li>
-                  <li>
-                    <span className="font-mono font-medium">NEXT_PUBLIC_DUMMY_CONTRACT</span>: 
-                    <span className="ml-2 font-mono">{process.env.NEXT_PUBLIC_DUMMY_CONTRACT || '(not set)'}</span>
+                  <li className="break-words">
+                    <span className="font-mono font-medium">NEXT_PUBLIC_DUMMY_CONTRACT</span>:
+                    <span className="ml-2 font-mono break-all">{process.env.NEXT_PUBLIC_DUMMY_CONTRACT || '(not set)'}</span>
                   </li>
                 </ul>
                 <p className="text-sm text-gray-700 mt-4">
@@ -395,4 +389,4 @@ export default function AdminSettings() {
       )}
     </motion.div>
   );
-} 
+}

@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { web3Integration } from '../../lib/web3-integration';
 import { motion } from 'framer-motion';
 import { ClockIcon, ArrowLeftCircleIcon, ArrowRightCircleIcon } from '@heroicons/react/24/outline';
-import { apiService } from '../../lib/api';
+import { adminService } from '../../lib/admin-service';
 
 // Types for the logs
 type LogEntry = {
@@ -46,49 +45,45 @@ const actionColors = {
 };
 
 export default function AdminLogs() {
-  const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, pages: 1 });
-  const [isAdmin, setIsAdmin] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter states
   const [action, setAction] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Integration.initialize();
-      setIsConnected(connected);
-      
-      if (connected) {
-        setIsAdmin(web3Integration.isAdmin());
-        loadLogs(1);
-      } else {
+    const initAdmin = async () => {
+      try {
+        await adminService.initialize();
+        await loadLogs(1);
+      } catch (error) {
+        console.error('Error initializing admin:', error);
+        setError('Failed to initialize admin connection');
+      } finally {
         setLoading(false);
       }
     };
-    
-    setTimeout(() => {
-      initWeb3();
-    }, 800);
+
+    initAdmin();
   }, []);
 
   const loadLogs = async (page: number, actionFilter: string = action, statusFilter: string = status) => {
     try {
       setLoading(true);
-      
+
       const options: any = {
         page,
         limit: 10
       };
-      
+
       if (actionFilter) options.action = actionFilter;
       if (statusFilter) options.status = statusFilter;
-      
-      const response = await apiService.getAdminLogs(options);
+
+      const response = await adminService.getAdminLogs(options);
       setLogs(response.logs || []);
       setPagination(response.pagination || { total: 0, page: 1, pages: 1 });
       setCurrentPage(page);
@@ -153,7 +148,7 @@ export default function AdminLogs() {
             Track all administrator actions on the platform
           </motion.p>
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -161,59 +156,16 @@ export default function AdminLogs() {
         >
           <button
             onClick={() => loadLogs(currentPage)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            Refresh Logs
+            <span className="hidden sm:inline">Refresh Logs</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
         </motion.div>
       </div>
-
-      {!isConnected && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Blockchain connection not established. Please install MetaMask or another web3 provider.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {!isAdmin && isConnected && (
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                Your current wallet address is not the admin wallet. Admin address: {web3Integration.getAdminAddress()}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {error && (
         <motion.div
@@ -260,7 +212,7 @@ export default function AdminLogs() {
               <option value="CAST_VOTE">Cast Vote</option>
             </select>
           </div>
-          
+
           <div>
             <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select
@@ -274,19 +226,19 @@ export default function AdminLogs() {
               <option value="FAILURE">Failure</option>
             </select>
           </div>
-          
-          <div className="flex items-end space-x-2">
+
+          <div className="flex flex-col sm:flex-row items-end space-y-2 sm:space-y-0 sm:space-x-2">
             <button
               type="button"
               onClick={handleFilter}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Apply Filters
             </button>
             <button
               type="button"
               onClick={clearFilters}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               Clear
             </button>
@@ -340,47 +292,58 @@ export default function AdminLogs() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Time
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Admin
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Action
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="hidden sm:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Description
                       </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {logs.map((log, index) => (
-                      <motion.tr 
-                        key={log._id} 
+                      <motion.tr
+                        key={log._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.05 }}
                         className="hover:bg-gray-50"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <ClockIcon className="h-4 w-4 text-gray-400 mr-2" />
-                            {formatDate(log.timestamp)}
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div className="flex flex-col">
+                            <ClockIcon className="h-4 w-4 text-gray-400 mb-1 sm:hidden" />
+                            <span className="text-xs sm:text-sm">{formatDate(log.timestamp)}</span>
+                            {/* Show admin address on mobile under time */}
+                            <span className="text-xs text-gray-400 font-mono lg:hidden mt-1">
+                              {truncateAddress(log.adminAddress)}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className="font-mono">{truncateAddress(log.adminAddress)}</span>
+                        <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className="font-mono text-xs">{truncateAddress(log.adminAddress)}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)}`}>
-                            {log.action.replace(/_/g, ' ')}
-                          </span>
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getActionColor(log.action)} mb-1`}>
+                              <span className="hidden sm:inline">{log.action.replace(/_/g, ' ')}</span>
+                              <span className="sm:hidden">{log.action.split('_')[0]}</span>
+                            </span>
+                            {/* Show description on mobile under action */}
+                            <div className="sm:hidden text-xs text-gray-500 mt-1 break-words">
+                              {log.description}
+                            </div>
+                          </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="hidden sm:table-cell px-6 py-4 text-sm text-gray-500">
                           <div className="max-w-xs truncate" title={log.description}>
                             {log.description}
                           </div>
@@ -390,19 +353,21 @@ export default function AdminLogs() {
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            log.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {log.status}
-                          </span>
-                          {log.metadata?.message && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {log.metadata.message}
-                            </div>
-                          )}
+                        <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${log.status === 'SUCCESS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                              {log.status}
+                            </span>
+                            {log.metadata?.message && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {log.metadata.message}
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </motion.tr>
+
                     ))}
                   </tbody>
                 </table>
@@ -411,6 +376,22 @@ export default function AdminLogs() {
               {/* Pagination */}
               {pagination.pages > 1 && (
                 <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <button
+                      onClick={() => loadLogs(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => loadLogs(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                    </button>
+                  </div>
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
@@ -445,11 +426,10 @@ export default function AdminLogs() {
                             <button
                               key={i}
                               onClick={() => loadLogs(pageNum)}
-                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                pagination.page === pageNum
-                                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                              }`}
+                              className={`relative inline-flex items-center px-3 sm:px-4 py-2 border text-sm font-medium ${pagination.page === pageNum
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -475,4 +455,4 @@ export default function AdminLogs() {
       )}
     </motion.div>
   );
-} 
+}

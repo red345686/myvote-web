@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { web3Integration } from '../../lib/web3-integration';
+import { adminService } from '../../lib/admin-service';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-import { Voter } from '../../lib/api';
 
 // Define a more complete User type based on the API response
 type User = {
@@ -16,10 +15,10 @@ type User = {
   dob?: string;
   aadharImage?: string;
   gender?: string;
+  blockchainAddress?: string;
 };
 
 export default function VerifyUsers() {
-  const [isConnected, setIsConnected] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,41 +27,31 @@ export default function VerifyUsers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalVoters, setTotalVoters] = useState(0);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isDevMode, setIsDevMode] = useState(false);
-  
+
   useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Integration.initialize();
-      setIsConnected(connected);
-      
-      if (connected) {
-        // Check if current wallet is admin (just for the UI indicator)
-        setIsAdmin(web3Integration.isAdmin());
-        setIsDevMode(web3Integration.isDevMode());
-        
-        // Always load users regardless of admin status
-        loadUsers();
-      } else {
+    const initAdmin = async () => {
+      try {
+        await adminService.initialize();
+        await loadUsers();
+      } catch (error) {
+        console.error('Error initializing admin:', error);
+      } finally {
         setLoading(false);
       }
     };
-    
-    // Add a small delay to show the loading animation
-    setTimeout(() => {
-      initWeb3();
-    }, 800);
+
+    initAdmin();
   }, []);
-  
+
   const loadUsers = async (page = 1, search = searchTerm) => {
     setLoading(true);
     try {
-      const response = await web3Integration.listVoters({
+      const response = await adminService.listVoters({
         page,
         limit: 10,
         search
       });
-      
+
       if (response && response.voters) {
         // Map the API response to our User type
         setUsers(response.voters.map((voter: any) => ({
@@ -74,7 +63,7 @@ export default function VerifyUsers() {
           aadharImage: voter.aadharImage,
           gender: voter.encryptedData?.gender || 'Unknown'
         })));
-        
+
         setTotalPages(response.pagination.pages || 1);
         setTotalVoters(response.pagination.total || 0);
         setCurrentPage(page);
@@ -85,20 +74,20 @@ export default function VerifyUsers() {
       setLoading(false);
     }
   };
-  
+
   const handleVerifyUser = async (userId: string, userName: string) => {
     setVerifyingUserId(userId);
     try {
-      const success = await web3Integration.verifyVoter(userId, `Verified by admin on ${new Date().toISOString()}`);
-      
+      const success = await adminService.verifyVoter(userId, `Verified by admin on ${new Date().toISOString()}`);
+
       if (success) {
         // Update the users list without reloading
-        setUsers(users.map(user => 
+        setUsers(users.map(user =>
           user.id === userId ? { ...user, isVerified: true } : user
         ));
-        
+
         setShowVerifiedSuccess(userName);
-        
+
         // Hide success message after 3 seconds
         setTimeout(() => {
           setShowVerifiedSuccess(null);
@@ -110,28 +99,28 @@ export default function VerifyUsers() {
       setVerifyingUserId(null);
     }
   };
-  
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    
+
     // Debounce search - wait 500ms after typing stops
     const handler = setTimeout(() => {
       loadUsers(1, value);
     }, 500);
-    
+
     return () => {
       clearTimeout(handler);
     };
   };
-  
+
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
     loadUsers(page);
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -139,7 +128,7 @@ export default function VerifyUsers() {
     >
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -147,7 +136,7 @@ export default function VerifyUsers() {
           >
             User Verification
           </motion.h1>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -157,75 +146,9 @@ export default function VerifyUsers() {
           </motion.p>
         </div>
       </div>
-      
-      {!isConnected && (
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Blockchain connection not established. Please install MetaMask or another web3 provider.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {!isAdmin && isConnected && !isDevMode && (
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-red-700">
-                Your current wallet address is not the admin wallet. Admin address: {web3Integration.getAdminAddress()}
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
-      {isDevMode && isConnected && (
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-purple-50 border-l-4 border-purple-400 p-4 rounded-r shadow-sm"
-        >
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-purple-700">
-                <strong>Development Mode Active:</strong> Your current wallet ({web3Integration.getCurrentAddress()?.substring(0, 8)}...) is being used as the admin address.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      )}
-      
+
       {showVerifiedSuccess && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -243,8 +166,8 @@ export default function VerifyUsers() {
           </div>
         </motion.div>
       )}
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.4 }}
@@ -276,7 +199,7 @@ export default function VerifyUsers() {
             </div>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="text-center">
@@ -360,7 +283,7 @@ export default function VerifyUsers() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {user.isVerified ? (
-                            <motion.span 
+                            <motion.span
                               className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800"
                               initial={{ scale: 0.8 }}
                               animate={{ scale: 1 }}
@@ -369,7 +292,7 @@ export default function VerifyUsers() {
                               Verified
                             </motion.span>
                           ) : (
-                            <motion.span 
+                            <motion.span
                               className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800"
                               initial={{ scale: 0.8 }}
                               animate={{ scale: 1 }}
@@ -416,7 +339,7 @@ export default function VerifyUsers() {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
@@ -424,14 +347,14 @@ export default function VerifyUsers() {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
@@ -456,7 +379,7 @@ export default function VerifyUsers() {
                           <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </button>
-                      
+
                       {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                         // Show pages around current page
                         let pageNum;
@@ -469,22 +392,21 @@ export default function VerifyUsers() {
                         } else {
                           pageNum = currentPage - 2 + i;
                         }
-                        
+
                         return (
                           <button
                             key={pageNum}
                             onClick={() => handlePageChange(pageNum)}
-                            className={`relative inline-flex items-center px-4 py-2 border ${
-                              currentPage === pageNum
-                                ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                                : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"
-                            } text-sm font-medium`}
+                            className={`relative inline-flex items-center px-3 sm:px-4 py-2 border ${currentPage === pageNum
+                              ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                              : "border-gray-300 bg-white text-gray-500 hover:bg-gray-50"
+                              } text-sm font-medium`}
                           >
                             {pageNum}
                           </button>
                         );
                       })}
-                      
+
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
@@ -500,7 +422,7 @@ export default function VerifyUsers() {
                 </div>
               </div>
             )}
-            
+
             <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 sm:px-6">
               <div className="flex justify-center">
                 <motion.button
@@ -519,7 +441,7 @@ export default function VerifyUsers() {
           </div>
         )}
       </motion.div>
-      
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -536,4 +458,4 @@ export default function VerifyUsers() {
       </motion.div>
     </motion.div>
   );
-} 
+}

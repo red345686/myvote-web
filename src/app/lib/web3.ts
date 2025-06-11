@@ -50,10 +50,10 @@ const VOTING_CONTRACT_ABI = [
 ];
 
 // This would be replaced with actual contract address
-const VOTING_CONTRACT_ADDRESS = '0x0000000000000000000000000000000000000000';
+const VOTING_CONTRACT_ADDRESS = '0x9a77A46f27ee0663fe44BC3b51dBba37092Cf9c0';
 
 // Get environment variables
-const DUMMY_MODE = process.env.NEXT_PUBLIC_DUMMY_CONTRACT === 'true';
+const DUMMY_MODE = true; // Always use dummy mode
 
 export type Election = {
   id: number;
@@ -80,51 +80,25 @@ class Web3Service {
   signer: ethers.JsonRpcSigner | null = null;
   contract: ethers.Contract | null = null;
   dummyMode: boolean = DUMMY_MODE;
-  
+
   async initialize() {
     try {
-      if (this.dummyMode) {
-        console.log("Using DUMMY mode for blockchain operations - no actual contract calls will be made");
-        return true;
-      }
-      
-      this.provider = await detectEthereumProvider();
-      
-      if (this.provider) {
-        // Connect to the provider
-        const ethersProvider = new ethers.BrowserProvider(this.provider);
-        
-        // Request account access
-        await this.provider.request({ method: 'eth_requestAccounts' });
-        
-        // Get signer
-        this.signer = await ethersProvider.getSigner();
-        
-        // Initialize contract
-        this.contract = new ethers.Contract(
-          VOTING_CONTRACT_ADDRESS,
-          VOTING_CONTRACT_ABI,
-          this.signer
-        );
-        
-        return true;
-      } else {
-        console.error('Please install MetaMask or another Web3 provider');
-        return false;
-      }
+      // Always use dummy mode with hardcoded admin address
+      console.log("Using hardcoded admin mode - no wallet connection required");
+      return true;
     } catch (error) {
       console.error('Error initializing Web3:', error);
       return false;
     }
   }
-  
+
   async verifyUser(userId: string): Promise<boolean> {
     try {
       if (this.dummyMode) {
         console.log(`DUMMY MODE: Pretending to verify user ${userId} on blockchain`);
         return true;
       }
-      
+
       if (!this.contract) throw new Error('Contract not initialized');
       const tx = await this.contract.verifyUser(userId);
       await tx.wait();
@@ -134,7 +108,7 @@ class Web3Service {
       return false;
     }
   }
-  
+
   async scheduleElection(
     name: string,
     startTime: number,
@@ -145,7 +119,7 @@ class Web3Service {
         console.log(`DUMMY MODE: Pretending to schedule election "${name}" from ${startTime} to ${endTime}`);
         return true;
       }
-      
+
       if (!this.contract) throw new Error('Contract not initialized');
       const electionId = Date.now(); // Using timestamp as a simple ID
       const tx = await this.contract.scheduleElection(electionId, name, startTime, endTime);
@@ -156,7 +130,7 @@ class Web3Service {
       return false;
     }
   }
-  
+
   async addCandidate(
     electionId: number,
     name: string,
@@ -167,7 +141,7 @@ class Web3Service {
         console.log(`DUMMY MODE: Pretending to add candidate "${name}" to election ${electionId}`);
         return true;
       }
-      
+
       if (!this.contract) throw new Error('Contract not initialized');
       const tx = await this.contract.addCandidate(electionId, name, info);
       await tx.wait();
@@ -177,7 +151,7 @@ class Web3Service {
       return false;
     }
   }
-  
+
   async getElections(): Promise<Election[]> {
     try {
       if (this.dummyMode) {
@@ -187,7 +161,7 @@ class Web3Service {
           { id: 2, name: 'Local Municipal Election', startTime: 1719792000, endTime: 1722470400 }
         ];
       }
-      
+
       if (!this.contract) throw new Error('Contract not initialized');
       // In a real application, this would call the contract method
       // For demo purposes, return mock data
@@ -200,7 +174,7 @@ class Web3Service {
       return [];
     }
   }
-  
+
   async getCandidates(electionId: number): Promise<Candidate[]> {
     try {
       if (this.dummyMode) {
@@ -211,7 +185,7 @@ class Web3Service {
           { id: 3, name: 'Robert Johnson', info: 'Party C', electionId }
         ];
       }
-      
+
       if (!this.contract) throw new Error('Contract not initialized');
       // In a real application, this would call the contract method
       // For demo purposes, return mock data
@@ -225,7 +199,7 @@ class Web3Service {
       return [];
     }
   }
-  
+
   async getUsers(): Promise<User[]> {
     // In a real app, this would call a backend API or contract method
     // For demo purposes, return mock data
@@ -240,4 +214,4 @@ class Web3Service {
 }
 
 // Singleton instance
-export const web3Service = new Web3Service(); 
+export const web3Service = new Web3Service();

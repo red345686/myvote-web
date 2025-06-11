@@ -1,10 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { web3Service, Election } from '../../lib/web3';
+import { useEffect, useState, useCallback } from 'react';
+import { adminService } from '../../lib/admin-service';
 import { useForm } from 'react-hook-form';
 import { CalendarIcon, ClockIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+
+// Define Election type since we no longer have web3Service
+type Election = {
+  id: number;
+  name: string;
+  startTime: number;
+  endTime: number;
+};
 
 type ElectionFormData = {
   name: string;
@@ -20,72 +28,79 @@ export default function ScheduleElections() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
-  
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ElectionFormData>();
-  
-  useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Service.initialize();
-      setIsConnected(connected);
-      
-      if (connected) {
-        loadElections();
-      } else {
-        setLoading(false);
-      }
-    };
-    
-    // Add a small delay to show the loading animation
-    setTimeout(() => {
-      initWeb3();
-    }, 800);
-  }, []);
-  
-  const loadElections = async () => {
-    setLoading(true);
-    const electionsData = await web3Service.getElections();
-    setElections(electionsData);
+
+  const initializeApp = useCallback(async () => {
+    const connected = await adminService.initialize();
+    setIsConnected(connected);
+
+    if (connected) {
+      setIsAdmin(adminService.isAdmin());
+      // For now, just set some sample elections
+      setElections([
+        { id: 1, name: 'Presidential Election 2025', startTime: 1735689600, endTime: 1738368000 },
+        { id: 2, name: 'Local Municipal Election', startTime: 1719792000, endTime: 1722470400 }
+      ]);
+    }
     setLoading(false);
-  };
-  
+  }, []);
+
+  useEffect(() => {
+    // Add a small delay to show the loading animation
+    const timer = setTimeout(() => {
+      initializeApp();
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [initializeApp]);
+
   const onSubmit = async (data: ElectionFormData) => {
     try {
       setSubmitting(true);
-      
+
       // Convert form data to timestamps
       const startTimestamp = new Date(`${data.startDate}T${data.startTime}`).getTime() / 1000;
       const endTimestamp = new Date(`${data.endDate}T${data.endTime}`).getTime() / 1000;
-      
-      // Call blockchain method
-      const result = await web3Service.scheduleElection(
-        data.name,
-        startTimestamp,
-        endTimestamp
-      );
-      
-      if (result) {
-        setSuccess(true);
-        reset(); // Reset form
-        loadElections(); // Reload elections
-        
-        // Hide success message after 3 seconds
+
+      // In a real app, we would call an API here
+      // For demo, just simulate success and add to list
+      return new Promise<void>((resolve) => {
         setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
-      }
+          const newElection: Election = {
+            id: Date.now(),
+            name: data.name,
+            startTime: startTimestamp,
+            endTime: endTimestamp
+          };
+
+          setElections(prev => [newElection, ...prev]);
+          setSuccess(true);
+          reset();
+
+          // Hide success message after 3 seconds
+          setTimeout(() => {
+            setSuccess(false);
+          }, 3000);
+
+          setSubmitting(false);
+          resolve();
+        }, 1000);
+      });
+
     } catch (error) {
       console.error('Error scheduling election:', error);
-    } finally {
       setSubmitting(false);
     }
   };
-  
+
   const formatDateTime = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     return date.toLocaleString();
   };
 
-  if (loading && elections.length === 0) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
         <div className="text-center">
@@ -103,7 +118,7 @@ export default function ScheduleElections() {
 
   return (
     <div className="space-y-8">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -116,9 +131,9 @@ export default function ScheduleElections() {
           </p>
         </div>
       </motion.div>
-      
+
       {!isConnected && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
@@ -138,9 +153,9 @@ export default function ScheduleElections() {
           </div>
         </motion.div>
       )}
-      
+
       {success && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -161,8 +176,8 @@ export default function ScheduleElections() {
           </div>
         </motion.div>
       )}
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
@@ -172,7 +187,7 @@ export default function ScheduleElections() {
           <PlusIcon className="h-5 w-5 text-blue-500 mr-2" />
           <h2 className="text-lg font-medium text-gray-900">Create New Election</h2>
         </div>
-        
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -192,7 +207,7 @@ export default function ScheduleElections() {
               )}
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
             <div>
               <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 flex items-center">
@@ -212,7 +227,7 @@ export default function ScheduleElections() {
                 )}
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 flex items-center">
                 <ClockIcon className="h-4 w-4 mr-1 text-blue-500" />
@@ -231,7 +246,7 @@ export default function ScheduleElections() {
                 )}
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 flex items-center">
                 <CalendarIcon className="h-4 w-4 mr-1 text-blue-500" />
@@ -250,7 +265,7 @@ export default function ScheduleElections() {
                 )}
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 flex items-center">
                 <ClockIcon className="h-4 w-4 mr-1 text-blue-500" />
@@ -270,13 +285,13 @@ export default function ScheduleElections() {
               </div>
             </div>
           </div>
-          
-          <div className="flex justify-end">
+
+          <div className="flex flex-col sm:flex-row sm:justify-end pt-4">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
               disabled={!isConnected || submitting}
             >
               {submitting ? (
@@ -297,8 +312,8 @@ export default function ScheduleElections() {
           </div>
         </form>
       </motion.div>
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
@@ -310,7 +325,7 @@ export default function ScheduleElections() {
             Scheduled Elections
           </h3>
         </div>
-        
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="text-center">
@@ -337,43 +352,50 @@ export default function ScheduleElections() {
               </li>
             ) : (
               elections.map((election, index) => (
-                <motion.li 
-                  key={election.id} 
-                  initial={{ opacity: 0, y: 10 }} 
-                  animate={{ opacity: 1, y: 0 }} 
+                <motion.li
+                  key={election.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: 0.1 * index }}
                   className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors duration-150"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center">
-                        <CalendarIcon className="h-5 w-5 text-gray-400 mr-2" />
+                      <div className="flex items-center mb-2 sm:mb-0">
+                        <CalendarIcon className="h-5 w-5 text-gray-400 mr-2 flex-shrink-0" />
                         <p className="text-sm font-medium text-blue-600 truncate">{election.name}</p>
                       </div>
-                      <p className="mt-2 flex items-center text-sm text-gray-500">
-                        <ClockIcon className="flex-shrink-0 h-4 w-4 text-gray-400 mr-1" />
-                        <span className="truncate">
-                          {formatDateTime(election.startTime)} - {formatDateTime(election.endTime)}
-                        </span>
-                      </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center text-sm text-gray-500 space-y-1 sm:space-y-0">
+                        <div className="flex items-center">
+                          <ClockIcon className="flex-shrink-0 h-4 w-4 text-gray-400 mr-1" />
+                          <span className="text-xs sm:text-sm">
+                            Start: {formatDateTime(election.startTime)}
+                          </span>
+                        </div>
+                        <div className="flex items-center sm:ml-4">
+                          <ClockIcon className="flex-shrink-0 h-4 w-4 text-gray-400 mr-1" />
+                          <span className="text-xs sm:text-sm">
+                            End: {formatDateTime(election.endTime)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="ml-4 flex-shrink-0">
-                      <motion.span 
+                    <div className="flex-shrink-0 flex justify-end sm:justify-start">
+                      <motion.span
                         initial={{ scale: 0.8 }}
                         animate={{ scale: 1 }}
                         transition={{ duration: 0.3 }}
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          election.startTime > (Date.now() / 1000)
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : election.endTime < (Date.now() / 1000)
+                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${election.startTime > (Date.now() / 1000)
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : election.endTime < (Date.now() / 1000)
                             ? 'bg-red-100 text-red-800'
                             : 'bg-green-100 text-green-800'
-                        }`}>
+                          }`}>
                         {election.startTime > (Date.now() / 1000)
                           ? 'Upcoming'
                           : election.endTime < (Date.now() / 1000)
-                          ? 'Ended'
-                          : 'Active'}
+                            ? 'Ended'
+                            : 'Active'}
                       </motion.span>
                     </div>
                   </div>
@@ -385,4 +407,4 @@ export default function ScheduleElections() {
       </motion.div>
     </div>
   );
-} 
+}

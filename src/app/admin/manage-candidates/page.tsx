@@ -1,25 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { web3Service, Election, Candidate } from '../../lib/web3';
+import { adminService } from '../../lib/admin-service';
 import { useForm } from 'react-hook-form';
 import Link from 'next/link';
 import { UserPlusIcon, ArrowLeftIcon, CalendarIcon, IdentificationIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+
+// Define types since we're not using web3Service
+type Election = {
+  id: number;
+  name: string;
+  startTime: number;
+  endTime: number;
+};
+
+type Candidate = {
+  id: number;
+  name: string;
+  info: string;
+};
 
 type CandidateFormData = {
   name: string;
   info: string;
 };
 
-export default function ManageCandidates() {
+function ManageCandidatesContent() {
   const searchParams = useSearchParams();
   const electionIdParam = searchParams.get('electionId');
   const [selectedElectionId, setSelectedElectionId] = useState<number | null>(
     electionIdParam ? parseInt(electionIdParam) : null
   );
-  
+
   const [isConnected, setIsConnected] = useState(false);
   const [elections, setElections] = useState<Election[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -27,27 +41,29 @@ export default function ManageCandidates() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
-  
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CandidateFormData>();
-  
+
   useEffect(() => {
-    const initWeb3 = async () => {
-      const connected = await web3Service.initialize();
+    const initAdmin = async () => {
+      const connected = await adminService.initialize();
       setIsConnected(connected);
-      
+      setIsAdmin(adminService.isAdmin());
+
       if (connected) {
         await loadElections();
       } else {
         setLoading(false);
       }
     };
-    
+
     // Add a small delay to show the loading animation
     setTimeout(() => {
-      initWeb3();
+      initAdmin();
     }, 800);
   }, []);
-  
+
   useEffect(() => {
     if (elections.length > 0 && selectedElectionId) {
       const election = elections.find(e => e.id === selectedElectionId);
@@ -57,58 +73,89 @@ export default function ManageCandidates() {
       }
     }
   }, [elections, selectedElectionId]);
-  
+
   const loadElections = async () => {
     setLoading(true);
-    const electionsData = await web3Service.getElections();
-    setElections(electionsData);
-    
-    if (electionsData.length > 0) {
+
+    // For demo purposes, create sample elections
+    const sampleElections: Election[] = [
+      {
+        id: 1,
+        name: 'Presidential Election 2025',
+        startTime: Math.floor(new Date('2025-01-15').getTime() / 1000),
+        endTime: Math.floor(new Date('2025-01-16').getTime() / 1000)
+      },
+      {
+        id: 2,
+        name: 'Local Municipal Election',
+        startTime: Math.floor(new Date('2025-02-10').getTime() / 1000),
+        endTime: Math.floor(new Date('2025-02-11').getTime() / 1000)
+      }
+    ];
+
+    setElections(sampleElections);
+
+    if (sampleElections.length > 0) {
       if (!selectedElectionId) {
-        setSelectedElectionId(electionsData[0].id);
+        setSelectedElectionId(sampleElections[0].id);
       }
     } else {
       setLoading(false);
     }
   };
-  
+
   const loadCandidates = async (electionId: number) => {
     setLoading(true);
-    const candidatesData = await web3Service.getCandidates(electionId);
-    setCandidates(candidatesData);
+
+    // For demo purposes, create sample candidates based on election
+    const sampleCandidates: Candidate[] = [
+      {
+        id: 1,
+        name: 'John Smith',
+        info: 'Independent candidate with 20 years of public service experience'
+      },
+      {
+        id: 2,
+        name: 'Sarah Johnson',
+        info: 'Progressive Party candidate focused on education and healthcare'
+      }
+    ];
+
+    setCandidates(sampleCandidates);
     setLoading(false);
   };
-  
+
   const onSubmit = async (data: CandidateFormData) => {
     if (!selectedElectionId) return;
-    
+
     try {
       setSubmitting(true);
-      
-      // Call blockchain method
-      const result = await web3Service.addCandidate(
-        selectedElectionId,
-        data.name,
-        data.info
-      );
-      
-      if (result) {
-        setSuccess(true);
-        reset(); // Reset form
-        loadCandidates(selectedElectionId); // Reload candidates
-        
-        // Hide success message after 3 seconds
-        setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
-      }
+
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Add new candidate to the list
+      const newCandidate: Candidate = {
+        id: Date.now(),
+        name: data.name,
+        info: data.info
+      };
+
+      setCandidates([...candidates, newCandidate]);
+      setSuccess(true);
+      reset();
+
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
     } catch (error) {
       console.error('Error adding candidate:', error);
     } finally {
       setSubmitting(false);
     }
   };
-  
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString();
   };
@@ -131,7 +178,7 @@ export default function ManageCandidates() {
 
   return (
     <div className="space-y-8">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -144,9 +191,9 @@ export default function ManageCandidates() {
           </p>
         </div>
       </motion.div>
-      
+
       {!isConnected && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
@@ -160,15 +207,38 @@ export default function ManageCandidates() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                Blockchain connection not established. Please install MetaMask or another web3 provider.
+                Admin connection not established. Please log in to continue.
               </p>
             </div>
           </div>
         </motion.div>
       )}
-      
+
+      {!isAdmin && isConnected && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r shadow-sm"
+        >
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">
+                Your account does not have admin privileges.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {success && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
@@ -189,10 +259,10 @@ export default function ManageCandidates() {
           </div>
         </motion.div>
       )}
-      
+
       {/* Election Selector */}
       {elections.length > 0 ? (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -209,7 +279,7 @@ export default function ManageCandidates() {
             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
             value={selectedElectionId || ''}
             onChange={(e) => setSelectedElectionId(Number(e.target.value))}
-            disabled={!isConnected || loading}
+            disabled={!isConnected || loading || !isAdmin}
           >
             {elections.map((election) => (
               <option key={election.id} value={election.id}>
@@ -217,42 +287,47 @@ export default function ManageCandidates() {
               </option>
             ))}
           </select>
-          
+
           {selectedElection && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               transition={{ duration: 0.3 }}
               className="mt-4 text-sm text-gray-500 p-3 bg-gray-50 rounded-md"
             >
-              <p className="flex items-center">
-                <span className="font-bold mr-2">Election Status:</span> 
-                <motion.span 
-                  initial={{ scale: 0.8 }}
-                  animate={{ scale: 1 }}
-                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    selectedElection.startTime > (Date.now() / 1000)
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : selectedElection.endTime < (Date.now() / 1000)
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-green-100 text-green-800'
-                  }`}
-                >
-                  {selectedElection.startTime > (Date.now() / 1000)
-                    ? 'Upcoming'
-                    : selectedElection.endTime < (Date.now() / 1000)
-                    ? 'Ended'
-                    : 'Active'
-                  }
-                </motion.span>
-              </p>
-              <p className="mt-2"><span className="font-bold">Start Date:</span> {formatDate(selectedElection.startTime)}</p>
-              <p className="mt-1"><span className="font-bold">End Date:</span> {formatDate(selectedElection.endTime)}</p>
+              <div className="space-y-2">
+                <p className="flex flex-col sm:flex-row sm:items-center">
+                  <span className="font-bold mr-2">Election Status:</span>
+                  <motion.span
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedElection && typeof selectedElection.startTime === 'number' && typeof selectedElection.endTime === 'number'
+                      ? Number(selectedElection.startTime) > (Date.now() / 1000)
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : Number(selectedElection.endTime) < (Date.now() / 1000)
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}
+                  >
+                    {selectedElection && typeof selectedElection.startTime === 'number' && typeof selectedElection.endTime === 'number'
+                      ? Number(selectedElection.startTime) > (Date.now() / 1000)
+                        ? 'Upcoming'
+                        : Number(selectedElection.endTime) < (Date.now() / 1000)
+                          ? 'Ended'
+                          : 'Active'
+                      : 'Unknown'
+                    }
+                  </motion.span>
+                </p>
+                <p><span className="font-bold">Start Date:</span> {formatDate(selectedElection.startTime)}</p>
+                <p><span className="font-bold">End Date:</span> {formatDate(selectedElection.endTime)}</p>
+              </div>
             </motion.div>
           )}
         </motion.div>
       ) : !loading && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -264,7 +339,7 @@ export default function ManageCandidates() {
             </svg>
             <h3 className="mt-2 text-sm font-medium text-gray-900">No elections available</h3>
             <p className="mt-1 text-sm text-gray-500">Please schedule an election first.</p>
-            <motion.div 
+            <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="mt-6"
@@ -279,12 +354,12 @@ export default function ManageCandidates() {
           </div>
         </motion.div>
       )}
-      
+
       {/* Candidates Management */}
-      {selectedElectionId && (
+      {selectedElectionId && isAdmin && (
         <>
           {/* Add Candidate Form */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -294,10 +369,10 @@ export default function ManageCandidates() {
               <UserPlusIcon className="h-5 w-5 text-blue-500 mr-2" />
               <h2 className="text-lg font-medium text-gray-900">Add New Candidate</h2>
             </div>
-            
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 flex items-center">
+                <label htmlFor="name" className=" text-sm font-medium text-gray-700 flex items-center">
                   <IdentificationIcon className="h-4 w-4 mr-1 text-blue-500" />
                   Candidate Name
                 </label>
@@ -308,16 +383,16 @@ export default function ManageCandidates() {
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.name ? 'border-red-500' : ''}`}
                     placeholder="e.g. John Doe"
                     {...register('name', { required: 'Candidate name is required' })}
-                    disabled={!isConnected || submitting}
+                    disabled={!isConnected || submitting || !isAdmin}
                   />
                   {errors.name && (
                     <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
                   )}
                 </div>
               </div>
-              
+
               <div>
-                <label htmlFor="info" className="block text-sm font-medium text-gray-700 flex items-center">
+                <label htmlFor="info" className=" text-sm font-medium text-gray-700 flex items-center">
                   <InformationCircleIcon className="h-4 w-4 mr-1 text-blue-500" />
                   Candidate Information
                 </label>
@@ -328,21 +403,21 @@ export default function ManageCandidates() {
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.info ? 'border-red-500' : ''}`}
                     placeholder="e.g. Party affiliation, background, etc."
                     {...register('info', { required: 'Candidate information is required' })}
-                    disabled={!isConnected || submitting}
+                    disabled={!isConnected || submitting || !isAdmin}
                   />
                   {errors.info && (
                     <p className="mt-2 text-sm text-red-600">{errors.info.message}</p>
                   )}
                 </div>
               </div>
-              
-              <div className="flex justify-end">
+
+              <div className="flex flex-col sm:flex-row sm:justify-end">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  disabled={!isConnected || submitting || Boolean(selectedElection && selectedElection.endTime < (Date.now() / 1000))}
+                  className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  disabled={!isConnected || submitting || !isAdmin || Boolean(selectedElection && selectedElection.endTime < (Date.now() / 1000))}
                 >
                   {submitting ? (
                     <>
@@ -362,9 +437,9 @@ export default function ManageCandidates() {
               </div>
             </form>
           </motion.div>
-          
+
           {/* Candidates List */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
@@ -376,7 +451,7 @@ export default function ManageCandidates() {
                 Candidates List
               </h3>
             </div>
-            
+
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="text-center">
@@ -404,16 +479,16 @@ export default function ManageCandidates() {
                 ) : (
                   <ul className="divide-y divide-gray-200">
                     {candidates.map((candidate, index) => (
-                      <motion.li 
-                        key={candidate.id} 
-                        initial={{ opacity: 0, y: 10 }} 
-                        animate={{ opacity: 1, y: 0 }} 
+                      <motion.li
+                        key={candidate.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.2, delay: 0.1 * index }}
                         className="px-4 py-5 sm:px-6 hover:bg-gray-50 transition-colors duration-150"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <motion.div 
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start sm:items-center">
+                            <motion.div
                               initial={{ scale: 0.9 }}
                               animate={{ scale: 1 }}
                               whileHover={{ scale: 1.05 }}
@@ -422,12 +497,12 @@ export default function ManageCandidates() {
                             >
                               <span className="text-blue-600 font-medium">{candidate.name.charAt(0)}</span>
                             </motion.div>
-                            <div className="ml-4">
+                            <div className="ml-4 flex-1">
                               <div className="text-sm font-medium text-blue-600">{candidate.name}</div>
-                              <div className="text-sm text-gray-500 mt-1">{candidate.info}</div>
+                              <div className="text-sm text-gray-500 mt-1 break-words">{candidate.info}</div>
                             </div>
                           </div>
-                          <div className="ml-2 flex-shrink-0 flex">
+                          <div className="mt-2 sm:mt-0 sm:ml-2 flex-shrink-0 flex justify-end">
                             <motion.span
                               initial={{ scale: 0.8 }}
                               animate={{ scale: 1 }}
@@ -447,8 +522,8 @@ export default function ManageCandidates() {
           </motion.div>
         </>
       )}
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.5 }}
@@ -463,4 +538,28 @@ export default function ManageCandidates() {
       </motion.div>
     </div>
   );
-} 
+}
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full min-h-[400px]">
+      <div className="text-center">
+        <div className="inline-block animate-spin-slow">
+          <svg className="w-16 h-16 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+        <p className="mt-4 text-gray-600 animate-pulse">Loading page...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ManageCandidates() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ManageCandidatesContent />
+    </Suspense>
+  );
+}
