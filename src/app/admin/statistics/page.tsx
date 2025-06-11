@@ -5,11 +5,14 @@ import { adminService } from '../../lib/admin-service';
 import { motion } from 'framer-motion';
 import { ChartBarIcon, UsersIcon, CheckCircleIcon, ClockIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline';
 import type { AdminStats } from '../../lib/api';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 export default function AdminStatistics() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+  const { translate, currentLanguage } = useLanguage();
 
   useEffect(() => {
     const initAdmin = async () => {
@@ -21,6 +24,53 @@ export default function AdminStatistics() {
       initAdmin();
     }, 800);
   }, []);
+
+  useEffect(() => {
+    translatePageContent();
+  }, [currentLanguage]);
+
+  const translatePageContent = async () => {
+    const textsToTranslate = {
+      title: 'Admin Dashboard',
+      subtitle: 'Key statistics and voter data',
+      loading: 'Loading...',
+      refreshStats: 'Refresh Statistics',
+      loadingStats: 'Loading statistics...',
+      totalVoters: 'Total Voters',
+      verifiedVoters: 'Verified Voters',
+      pendingVerification: 'Pending Verification',
+      verificationRate: 'Verification Rate',
+      genderDistribution: 'Gender Distribution',
+      ageDistribution: 'Age Distribution',
+      stateDistribution: 'State Distribution',
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
+      state: 'State',
+      total: 'Total',
+      percentage: 'Percentage',
+      newRegistrations: 'new registrations today',
+      verifications: 'verifications today',
+      viewPending: 'View pending verifications',
+      verifyUsers: 'Verify Users',
+      scheduleElections: 'Schedule Elections',
+      activityLogs: 'Activity Logs',
+      verifyUsersDesc: 'Review and verify pending user registrations',
+      scheduleElectionsDesc: 'Create and manage upcoming elections',
+      activityLogsDesc: 'View detailed admin activity logs',
+      noStats: 'No statistics available',
+      statsError: 'There was a problem loading the statistics.',
+      tryAgain: 'Try Again',
+      genderNotAvailable: 'Gender distribution data is not available.',
+      noStateData: 'No state distribution data available'
+    };
+
+    const translated: { [key: string]: string } = {};
+    for (const [key, text] of Object.entries(textsToTranslate)) {
+      translated[key] = await translate(text);
+    }
+    setTranslatedContent(translated);
+  };
 
   const loadStats = async () => {
     try {
@@ -58,7 +108,7 @@ export default function AdminStatistics() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-2xl font-semibold text-gray-900"
           >
-            Admin Dashboard
+            {translatedContent.title || 'Admin Dashboard'}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: -10 }}
@@ -66,7 +116,7 @@ export default function AdminStatistics() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-2 text-sm text-gray-700"
           >
-            Key statistics and voter data
+            {translatedContent.subtitle || 'Key statistics and voter data'}
           </motion.p>
         </div>
 
@@ -86,14 +136,14 @@ export default function AdminStatistics() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Loading...
+                {translatedContent.loading || 'Loading...'}
               </>
             ) : (
               <>
                 <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh Statistics
+                {translatedContent.refreshStats || 'Refresh Statistics'}
               </>
             )}
           </button>
@@ -131,7 +181,7 @@ export default function AdminStatistics() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-            <p className="mt-4 text-gray-600 animate-pulse">Loading statistics...</p>
+            <p className="mt-4 text-gray-600 animate-pulse">{translatedContent.loadingStats || 'Loading statistics...'}</p>
           </div>
         </div>
       ) : stats ? (
@@ -152,7 +202,7 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Total Voters</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">{translatedContent.totalVoters || 'Total Voters'}</dt>
                       <dd>
                         <div className="text-lg font-semibold text-gray-900">{stats.totalRegisteredVoters || 0}</div>
                       </dd>
@@ -163,7 +213,7 @@ export default function AdminStatistics() {
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
                   <div className="font-medium text-blue-600 hover:text-blue-700">
-                    {stats.dailyRegistrations || 0} new registrations today
+                    {stats.dailyRegistrations || 0} {translatedContent.newRegistrations || 'new registrations today'}
                   </div>
                 </div>
               </div>
@@ -183,7 +233,7 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Verified Voters</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">{translatedContent.verifiedVoters || 'Verified Voters'}</dt>
                       <dd>
                         <div className="text-lg font-semibold text-gray-900">{stats.totalVerifiedVoters || 0}</div>
                       </dd>
@@ -194,7 +244,7 @@ export default function AdminStatistics() {
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
                   <div className="font-medium text-green-600 hover:text-green-700">
-                    {stats.dailyVerifications || 0} verifications today
+                    {stats.dailyVerifications || 0} {translatedContent.verifications || 'verifications today'}
                   </div>
                 </div>
               </div>
@@ -214,7 +264,7 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Pending Verification</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">{translatedContent.pendingVerification || 'Pending Verification'}</dt>
                       <dd>
                         <div className="text-lg font-semibold text-gray-900">{stats.pendingVerifications || 0}</div>
                       </dd>
@@ -225,7 +275,7 @@ export default function AdminStatistics() {
               <div className="bg-gray-50 px-5 py-3">
                 <div className="text-sm">
                   <a href="/admin/verify-users" className="font-medium text-yellow-600 hover:text-yellow-700">
-                    View pending verifications
+                    {translatedContent.viewPending || 'View pending verifications'}
                   </a>
                 </div>
               </div>
@@ -245,7 +295,7 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">Verification Rate</dt>
+                      <dt className="text-sm font-medium text-gray-500 truncate">{translatedContent.verificationRate || 'Verification Rate'}</dt>
                       <dd>
                         <div className="text-lg font-semibold text-gray-900">
                           {stats.totalRegisteredVoters > 0
@@ -279,7 +329,7 @@ export default function AdminStatistics() {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="bg-white rounded-lg shadow-card p-4 sm:p-6"
           >
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Gender Distribution</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{translatedContent.genderDistribution || 'Gender Distribution'}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               {stats.maleVoters !== undefined && stats.femaleVoters !== undefined && stats.otherGenderVoters !== undefined ? (
                 [
@@ -308,7 +358,7 @@ export default function AdminStatistics() {
                 ))
               ) : (
                 <div className="col-span-full text-center text-sm text-gray-500 py-4">
-                  Gender distribution data is not available.
+                  {translatedContent.genderNotAvailable || 'Gender distribution data is not available.'}
                 </div>
               )}
             </div>
@@ -321,7 +371,7 @@ export default function AdminStatistics() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="bg-white rounded-lg shadow-card p-4 sm:p-6"
           >
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Age Distribution</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-4">{translatedContent.ageDistribution || 'Age Distribution'}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Object.entries(stats.ageDistribution).map(([ageGroup, count], index) => {
                 const ageLabel = ageGroup
@@ -362,21 +412,21 @@ export default function AdminStatistics() {
             className="bg-white rounded-lg shadow-card overflow-hidden"
           >
             <div className="px-4 py-5 sm:px-6">
-              <h2 className="text-lg font-medium text-gray-900">State Distribution</h2>
-              <p className="mt-1 text-sm text-gray-500">Voter distribution by state</p>
+              <h2 className="text-lg font-medium text-gray-900">{translatedContent.stateDistribution || 'State Distribution'}</h2>
+              <p className="mt-1 text-sm text-gray-500">{translatedContent.noStateData || 'No state distribution data available'}</p>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      State
+                      {translatedContent.state || 'State'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total
+                      {translatedContent.total || 'Total'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Percentage
+                      {translatedContent.percentage || 'Percentage'}
                     </th>
                   </tr>
                 </thead>
@@ -430,10 +480,10 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <a href="/admin/verify-users" className="font-medium text-gray-900 hover:text-gray-600">
-                      Verify Users
+                      {translatedContent.verifyUsers || 'Verify Users'}
                     </a>
                     <p className="text-sm text-gray-500">
-                      Review and verify pending user registrations
+                      {translatedContent.verifyUsersDesc || 'Review and verify pending user registrations'}
                     </p>
                   </div>
                 </div>
@@ -450,10 +500,10 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <a href="/admin/schedule-elections" className="font-medium text-gray-900 hover:text-gray-600">
-                      Schedule Elections
+                      {translatedContent.scheduleElections || 'Schedule Elections'}
                     </a>
                     <p className="text-sm text-gray-500">
-                      Create and manage upcoming elections
+                      {translatedContent.scheduleElectionsDesc || 'Create and manage upcoming elections'}
                     </p>
                   </div>
                 </div>
@@ -468,10 +518,10 @@ export default function AdminStatistics() {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <a href="/admin/logs" className="font-medium text-gray-900 hover:text-gray-600">
-                      Activity Logs
+                      {translatedContent.activityLogs || 'Activity Logs'}
                     </a>
                     <p className="text-sm text-gray-500">
-                      View detailed admin activity logs
+                      {translatedContent.activityLogsDesc || 'View detailed admin activity logs'}
                     </p>
                   </div>
                 </div>
@@ -489,13 +539,13 @@ export default function AdminStatistics() {
           <svg className="h-16 w-16 text-gray-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900">No statistics available</h3>
-          <p className="mt-1 text-sm text-gray-500">There was a problem loading the statistics.</p>
+          <h3 className="text-lg font-medium text-gray-900">{translatedContent.noStats || 'No statistics available'}</h3>
+          <p className="mt-1 text-sm text-gray-500">{translatedContent.statsError || 'There was a problem loading the statistics.'}</p>
           <button
             onClick={loadStats}
             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            Try Again
+            {translatedContent.tryAgain || 'Try Again'}
           </button>
         </motion.div>
       )}

@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { isAdminByEmail, testFirestore } from '../lib/firebase';
 
 export default function LoginPage() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    useEffect(() => {
+        testFirestore();
+    }, []);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,8 +22,23 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            // Always allow login - no authentication required
+            // Check if email is in the admin emails list
+            const emailIsAdmin = await isAdminByEmail(email);
+
+            if (!emailIsAdmin) {
+                setError('Access denied. This email is not authorized for admin access.');
+                setLoading(false);
+                return;
+            }
+
+            // For demo purposes, accept any password for authorized emails
+            // In production, you would verify the password here
+
+            // Store auth info
             localStorage.setItem('adminAuth', 'true');
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('loginMethod', 'email');
+
             router.push('/admin');
         } catch (err) {
             console.error('Login error:', err);
@@ -68,19 +88,20 @@ export default function LoginPage() {
                         )}
 
                         <div>
-                            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                                Username
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                Email Address
                             </label>
                             <div className="mt-1">
                                 <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    autoComplete="username"
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
                                     required
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                    placeholder="Enter your authorized email"
                                 />
                             </div>
                         </div>
@@ -99,6 +120,7 @@ export default function LoginPage() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                    placeholder="Enter password"
                                 />
                             </div>
                         </div>
@@ -130,12 +152,14 @@ export default function LoginPage() {
                                 <div className="w-full border-t border-gray-300" />
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">For Demo Use</span>
+                                <span className="px-2 bg-white text-gray-500">Access Control</span>
                             </div>
                         </div>
 
-                        <div className="mt-6 text-center text-xs text-gray-500">
-                            <p>Default credentials (username: admin, password: admin123)</p>
+                        <div className="mt-4 text-center text-xs text-gray-500 space-y-1">
+                            <p>✅ Only authorized email addresses from Firestore</p>
+                            <p>❌ Unauthorized access blocked</p>
+                            <p className="text-blue-600">Demo: Any password works for authorized emails</p>
                         </div>
                     </div>
                 </motion.div>

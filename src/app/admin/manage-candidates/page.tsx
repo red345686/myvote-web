@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import Link from 'next/link';
 import { UserPlusIcon, ArrowLeftIcon, CalendarIcon, IdentificationIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 // Define types since we're not using web3Service
 type Election = {
@@ -42,6 +43,8 @@ function ManageCandidatesContent() {
   const [success, setSuccess] = useState(false);
   const [selectedElection, setSelectedElection] = useState<Election | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+  const { translate, currentLanguage } = useLanguage();
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CandidateFormData>();
 
@@ -73,6 +76,51 @@ function ManageCandidatesContent() {
       }
     }
   }, [elections, selectedElectionId]);
+
+  useEffect(() => {
+    translatePageContent();
+  }, [currentLanguage]);
+
+  const translatePageContent = async () => {
+    const textsToTranslate = {
+      title: 'Manage Candidates',
+      subtitle: 'Add and view candidates for elections',
+      selectElection: 'Select Election',
+      electionStatus: 'Election Status',
+      startDate: 'Start Date',
+      endDate: 'End Date',
+      upcoming: 'Upcoming',
+      active: 'Active',
+      ended: 'Ended',
+      unknown: 'Unknown',
+      noElectionsAvailable: 'No elections available',
+      scheduleElectionFirst: 'Please schedule an election first.',
+      scheduleElections: 'Schedule Elections',
+      addNewCandidate: 'Add New Candidate',
+      candidateName: 'Candidate Name',
+      candidateInfo: 'Candidate Information',
+      addCandidate: 'Add Candidate',
+      processing: 'Processing...',
+      candidatesList: 'Candidates List',
+      loadingCandidates: 'Loading candidates...',
+      noCandidates: 'No candidates',
+      noCandidatesAdded: 'No candidates have been added to this election yet.',
+      candidateAdded: 'Candidate added successfully!',
+      backToDashboard: 'Back to Dashboard',
+      adminNotEstablished: 'Admin connection not established. Please log in to continue.',
+      noAdminPrivileges: 'Your account does not have admin privileges.',
+      loadingData: 'Loading data...',
+      nameRequired: 'Candidate name is required',
+      infoRequired: 'Candidate information is required',
+      candidateNumber: 'Candidate #'
+    };
+
+    const translated: { [key: string]: string } = {};
+    for (const [key, text] of Object.entries(textsToTranslate)) {
+      translated[key] = await translate(text);
+    }
+    setTranslatedContent(translated);
+  };
 
   const loadElections = async () => {
     setLoading(true);
@@ -170,7 +218,7 @@ function ManageCandidatesContent() {
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           </div>
-          <p className="mt-4 text-gray-600 animate-pulse">Loading data...</p>
+          <p className="mt-4 text-gray-600 animate-pulse">{translatedContent.loadingData || 'Loading data...'}</p>
         </div>
       </div>
     );
@@ -185,9 +233,9 @@ function ManageCandidatesContent() {
         className="sm:flex sm:items-center sm:justify-between"
       >
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Manage Candidates</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">{translatedContent.title || 'Manage Candidates'}</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Add and view candidates for elections
+            {translatedContent.subtitle || 'Add and view candidates for elections'}
           </p>
         </div>
       </motion.div>
@@ -207,7 +255,7 @@ function ManageCandidatesContent() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                Admin connection not established. Please log in to continue.
+                {translatedContent.adminNotEstablished || 'Admin connection not established. Please log in to continue.'}
               </p>
             </div>
           </div>
@@ -230,7 +278,7 @@ function ManageCandidatesContent() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-red-700">
-                Your account does not have admin privileges.
+                {translatedContent.noAdminPrivileges || 'Your account does not have admin privileges.'}
               </p>
             </div>
           </div>
@@ -253,7 +301,7 @@ function ManageCandidatesContent() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-green-700">
-                Candidate added successfully!
+                {translatedContent.candidateAdded || 'Candidate added successfully!'}
               </p>
             </div>
           </div>
@@ -271,7 +319,7 @@ function ManageCandidatesContent() {
           <div className="flex items-center mb-4">
             <CalendarIcon className="h-5 w-5 text-blue-500 mr-2" />
             <label htmlFor="election" className="block text-sm font-medium text-gray-700">
-              Select Election
+              {translatedContent.selectElection || 'Select Election'}
             </label>
           </div>
           <select
@@ -297,7 +345,7 @@ function ManageCandidatesContent() {
             >
               <div className="space-y-2">
                 <p className="flex flex-col sm:flex-row sm:items-center">
-                  <span className="font-bold mr-2">Election Status:</span>
+                  <span className="font-bold mr-2">{translatedContent.electionStatus || 'Election Status'}:</span>
                   <motion.span
                     initial={{ scale: 0.8 }}
                     animate={{ scale: 1 }}
@@ -312,16 +360,16 @@ function ManageCandidatesContent() {
                   >
                     {selectedElection && typeof selectedElection.startTime === 'number' && typeof selectedElection.endTime === 'number'
                       ? Number(selectedElection.startTime) > (Date.now() / 1000)
-                        ? 'Upcoming'
+                        ? translatedContent.upcoming || 'Upcoming'
                         : Number(selectedElection.endTime) < (Date.now() / 1000)
-                          ? 'Ended'
-                          : 'Active'
-                      : 'Unknown'
+                          ? translatedContent.ended || 'Ended'
+                          : translatedContent.active || 'Active'
+                      : translatedContent.unknown || 'Unknown'
                     }
                   </motion.span>
                 </p>
-                <p><span className="font-bold">Start Date:</span> {formatDate(selectedElection.startTime)}</p>
-                <p><span className="font-bold">End Date:</span> {formatDate(selectedElection.endTime)}</p>
+                <p><span className="font-bold">{translatedContent.startDate || 'Start Date'}:</span> {formatDate(selectedElection.startTime)}</p>
+                <p><span className="font-bold">{translatedContent.endDate || 'End Date'}:</span> {formatDate(selectedElection.endTime)}</p>
               </div>
             </motion.div>
           )}
@@ -337,8 +385,8 @@ function ManageCandidatesContent() {
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No elections available</h3>
-            <p className="mt-1 text-sm text-gray-500">Please schedule an election first.</p>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">{translatedContent.noElectionsAvailable || 'No elections available'}</h3>
+            <p className="mt-1 text-sm text-gray-500">{translatedContent.scheduleElectionFirst || 'Please schedule an election first.'}</p>
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -348,7 +396,7 @@ function ManageCandidatesContent() {
                 href="/admin/schedule-elections"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                <CalendarIcon className="h-4 w-4 mr-2" /> Schedule Elections
+                <CalendarIcon className="h-4 w-4 mr-2" /> {translatedContent.scheduleElections || 'Schedule Elections'}
               </Link>
             </motion.div>
           </div>
@@ -367,14 +415,14 @@ function ManageCandidatesContent() {
           >
             <div className="flex items-center mb-6">
               <UserPlusIcon className="h-5 w-5 text-blue-500 mr-2" />
-              <h2 className="text-lg font-medium text-gray-900">Add New Candidate</h2>
+              <h2 className="text-lg font-medium text-gray-900">{translatedContent.addNewCandidate || 'Add New Candidate'}</h2>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label htmlFor="name" className=" text-sm font-medium text-gray-700 flex items-center">
                   <IdentificationIcon className="h-4 w-4 mr-1 text-blue-500" />
-                  Candidate Name
+                  {translatedContent.candidateName || 'Candidate Name'}
                 </label>
                 <div className="mt-1">
                   <input
@@ -382,7 +430,7 @@ function ManageCandidatesContent() {
                     id="name"
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.name ? 'border-red-500' : ''}`}
                     placeholder="e.g. John Doe"
-                    {...register('name', { required: 'Candidate name is required' })}
+                    {...register('name', { required: translatedContent.nameRequired || 'Candidate name is required' })}
                     disabled={!isConnected || submitting || !isAdmin}
                   />
                   {errors.name && (
@@ -394,7 +442,7 @@ function ManageCandidatesContent() {
               <div>
                 <label htmlFor="info" className=" text-sm font-medium text-gray-700 flex items-center">
                   <InformationCircleIcon className="h-4 w-4 mr-1 text-blue-500" />
-                  Candidate Information
+                  {translatedContent.candidateInfo || 'Candidate Information'}
                 </label>
                 <div className="mt-1">
                   <textarea
@@ -402,7 +450,7 @@ function ManageCandidatesContent() {
                     rows={3}
                     className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.info ? 'border-red-500' : ''}`}
                     placeholder="e.g. Party affiliation, background, etc."
-                    {...register('info', { required: 'Candidate information is required' })}
+                    {...register('info', { required: translatedContent.infoRequired || 'Candidate information is required' })}
                     disabled={!isConnected || submitting || !isAdmin}
                   />
                   {errors.info && (
@@ -425,12 +473,12 @@ function ManageCandidatesContent() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Processing...
+                      {translatedContent.processing || 'Processing...'}
                     </>
                   ) : (
                     <>
                       <UserPlusIcon className="h-4 w-4 mr-2" />
-                      Add Candidate
+                      {translatedContent.addCandidate || 'Add Candidate'}
                     </>
                   )}
                 </motion.button>
@@ -448,7 +496,7 @@ function ManageCandidatesContent() {
             <div className="px-4 py-5 border-b border-gray-200 sm:px-6 flex items-center">
               <UserPlusIcon className="h-5 w-5 mr-2 text-blue-500" />
               <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Candidates List
+                {translatedContent.candidatesList || 'Candidates List'}
               </h3>
             </div>
 
@@ -461,7 +509,7 @@ function ManageCandidatesContent() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   </div>
-                  <p className="mt-4 text-gray-600 animate-pulse">Loading candidates...</p>
+                  <p className="mt-4 text-gray-600 animate-pulse">{translatedContent.loadingCandidates || 'Loading candidates...'}</p>
                 </div>
               </div>
             ) : (
@@ -471,9 +519,9 @@ function ManageCandidatesContent() {
                     <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                     </svg>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No candidates</h3>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">{translatedContent.noCandidates || 'No candidates'}</h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      No candidates have been added to this election yet.
+                      {translatedContent.noCandidatesAdded || 'No candidates have been added to this election yet.'}
                     </p>
                   </div>
                 ) : (
@@ -509,7 +557,7 @@ function ManageCandidatesContent() {
                               transition={{ duration: 0.3 }}
                               className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800"
                             >
-                              Candidate #{candidate.id}
+                              {translatedContent.candidateNumber || 'Candidate #'}{candidate.id}
                             </motion.span>
                           </div>
                         </div>
@@ -533,7 +581,7 @@ function ManageCandidatesContent() {
           href="/admin"
           className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors duration-150"
         >
-          <ArrowLeftIcon className="h-5 w-5 mr-1" /> Back to Dashboard
+          <ArrowLeftIcon className="h-5 w-5 mr-1" /> {translatedContent.backToDashboard || 'Back to Dashboard'}
         </Link>
       </motion.div>
     </div>

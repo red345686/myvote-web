@@ -5,6 +5,7 @@ import { adminService } from '../../lib/admin-service';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 // Define a more complete User type based on the API response
 type User = {
@@ -27,6 +28,8 @@ export default function VerifyUsers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalVoters, setTotalVoters] = useState(0);
+  const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+  const { translate, currentLanguage } = useLanguage();
 
   useEffect(() => {
     const initAdmin = async () => {
@@ -42,6 +45,49 @@ export default function VerifyUsers() {
 
     initAdmin();
   }, []);
+
+  useEffect(() => {
+    translatePageContent();
+  }, [currentLanguage]);
+
+  const translatePageContent = async () => {
+    const textsToTranslate = {
+      title: 'User Verification',
+      subtitle: 'Verify users to allow them to participate in elections',
+      successMessage: 'has been successfully verified!',
+      users: 'Users',
+      searchPlaceholder: 'Search by name or ID',
+      loadingText: 'Loading users...',
+      noUsersFound: 'No users found',
+      user: 'User',
+      gender: 'Gender',
+      district: 'District',
+      id: 'ID',
+      status: 'Status',
+      action: 'Action',
+      verified: 'Verified',
+      pending: 'Pending',
+      verifyUser: 'Verify User',
+      verifying: 'Verifying...',
+      hasIdProof: 'Has ID proof',
+      unknown: 'Unknown',
+      refresh: 'Refresh',
+      previous: 'Previous',
+      next: 'Next',
+      showing: 'Showing',
+      to: 'to',
+      of: 'of',
+
+      verificationInfo: 'Verification Information',
+      verificationDesc: 'Verifying users will allow them to participate in elections on the blockchain. Verification is irreversible and will be recorded on the blockchain.'
+    };
+
+    const translated: { [key: string]: string } = {};
+    for (const [key, text] of Object.entries(textsToTranslate)) {
+      translated[key] = await translate(text);
+    }
+    setTranslatedContent(translated);
+  };
 
   const loadUsers = async (page = 1, search = searchTerm) => {
     setLoading(true);
@@ -134,7 +180,7 @@ export default function VerifyUsers() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-2xl font-semibold text-gray-900"
           >
-            User Verification
+            {translatedContent.title || 'User Verification'}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: -10 }}
@@ -142,7 +188,7 @@ export default function VerifyUsers() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-2 text-sm text-gray-700"
           >
-            Verify users to allow them to participate in elections
+            {translatedContent.subtitle || 'Verify users to allow them to participate in elections'}
           </motion.p>
         </div>
       </div>
@@ -160,7 +206,7 @@ export default function VerifyUsers() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-green-700">
-                <strong>{showVerifiedSuccess}</strong> has been successfully verified!
+                <strong>{showVerifiedSuccess}</strong> {translatedContent.successMessage || 'has been successfully verified!'}
               </p>
             </div>
           </div>
@@ -176,7 +222,7 @@ export default function VerifyUsers() {
         <div className="px-4 py-5 border-b border-gray-200 sm:px-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg leading-6 font-medium text-gray-900">
-              Users
+              {translatedContent.users || 'Users'}
             </h3>
             <div className="flex-1 max-w-xs ml-4">
               <label htmlFor="search" className="sr-only">
@@ -191,7 +237,7 @@ export default function VerifyUsers() {
                   name="search"
                   id="search"
                   className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-3 py-2 sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Search by name or ID"
+                  placeholder={translatedContent.searchPlaceholder || 'Search by name or ID'}
                   value={searchTerm}
                   onChange={handleSearch}
                 />
@@ -209,7 +255,7 @@ export default function VerifyUsers() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               </div>
-              <p className="mt-4 text-gray-600 animate-pulse">Loading users...</p>
+              <p className="mt-4 text-gray-600 animate-pulse">{translatedContent.loadingText || 'Loading users...'}</p>
             </div>
           </div>
         ) : (
@@ -219,22 +265,22 @@ export default function VerifyUsers() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User
+                      {translatedContent.user || 'User'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gender
+                      {translatedContent.gender || 'Gender'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      District
+                      {translatedContent.district || 'District'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
+                      {translatedContent.id || 'ID'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      {translatedContent.status || 'Status'}
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Action
+                      {translatedContent.action || 'Action'}
                     </th>
                   </tr>
                 </thead>
@@ -246,7 +292,7 @@ export default function VerifyUsers() {
                           <svg className="h-10 w-10 text-gray-400 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                           </svg>
-                          <p>No users found</p>
+                          <p>{translatedContent.noUsersFound || 'No users found'}</p>
                         </div>
                       </td>
                     </tr>
@@ -267,16 +313,16 @@ export default function VerifyUsers() {
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{user.name}</div>
                               {user.aadharImage && (
-                                <div className="text-xs text-blue-500 cursor-pointer hover:underline">Has ID proof</div>
+                                <div className="text-xs text-blue-500 cursor-pointer hover:underline">{translatedContent.hasIdProof || 'Has ID proof'}</div>
                               )}
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{user.gender || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{user.gender || translatedContent.unknown}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500">{user.district || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{user.district || translatedContent.unknown}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-xs text-gray-500 truncate max-w-[120px]" title={user.id}>{user.id}</div>
@@ -289,7 +335,7 @@ export default function VerifyUsers() {
                               animate={{ scale: 1 }}
                               transition={{ duration: 0.3 }}
                             >
-                              Verified
+                              {translatedContent.verified || 'Verified'}
                             </motion.span>
                           ) : (
                             <motion.span
@@ -298,7 +344,7 @@ export default function VerifyUsers() {
                               animate={{ scale: 1 }}
                               transition={{ duration: 0.3 }}
                             >
-                              Pending
+                              {translatedContent.pending || 'Pending'}
                             </motion.span>
                           )}
                         </td>
@@ -306,7 +352,7 @@ export default function VerifyUsers() {
                           {user.isVerified ? (
                             <div className="flex items-center text-green-500">
                               <CheckCircleIcon className="h-5 w-5 mr-1" />
-                              Verified
+                              {translatedContent.verified || 'Verified'}
                             </div>
                           ) : (
                             <motion.button
@@ -322,12 +368,12 @@ export default function VerifyUsers() {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                   </svg>
-                                  Verifying...
+                                  {translatedContent.verifying || 'Verifying...'}
                                 </>
                               ) : (
                                 <>
                                   <CheckCircleIcon className="h-4 w-4 mr-1" />
-                                  Verify User
+                                  {translatedContent.verifyUser || 'Verify User'}
                                 </>
                               )}
                             </motion.button>
@@ -349,22 +395,22 @@ export default function VerifyUsers() {
                     disabled={currentPage === 1}
                     className="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Previous
+                    {translatedContent.previous || 'Previous'}
                   </button>
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
                     className="relative inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {translatedContent.next || 'Next'}
                   </button>
                 </div>
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-gray-700">
-                      Showing <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> to{" "}
-                      <span className="font-medium">{Math.min(currentPage * 10, totalVoters)}</span> of{" "}
-                      <span className="font-medium">{totalVoters}</span> users
+                      {translatedContent.showing || 'Showing'} <span className="font-medium">{(currentPage - 1) * 10 + 1}</span> {translatedContent.to || 'to'}{" "}
+                      <span className="font-medium">{Math.min(currentPage * 10, totalVoters)}</span> {translatedContent.of || 'of'}{" "}
+                      <span className="font-medium">{totalVoters}</span> {translatedContent.users || 'users'}
                     </p>
                   </div>
                   <div>
@@ -374,7 +420,7 @@ export default function VerifyUsers() {
                         disabled={currentPage === 1}
                         className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span className="sr-only">Previous</span>
+                        <span className="sr-only">{translatedContent.previous || 'Previous'}</span>
                         <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
@@ -412,7 +458,7 @@ export default function VerifyUsers() {
                         disabled={currentPage === totalPages}
                         className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <span className="sr-only">Next</span>
+                        <span className="sr-only">{translatedContent.next || 'Next'}</span>
                         <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                           <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                         </svg>
@@ -434,7 +480,7 @@ export default function VerifyUsers() {
                   <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  Refresh
+                  {translatedContent.refresh || 'Refresh'}
                 </motion.button>
               </div>
             </div>
@@ -452,9 +498,9 @@ export default function VerifyUsers() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Verification Information
+          {translatedContent.verificationInfo || 'Verification Information'}
         </h4>
-        <p className="text-sm text-blue-700">Verifying users will allow them to participate in elections on the blockchain. Verification is irreversible and will be recorded on the blockchain.</p>
+        <p className="text-sm text-blue-700">{translatedContent.verificationDesc || 'Verifying users will allow them to participate in elections on the blockchain. Verification is irreversible and will be recorded on the blockchain.'}</p>
       </motion.div>
     </motion.div>
   );

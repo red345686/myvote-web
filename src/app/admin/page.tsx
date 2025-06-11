@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { UsersIcon, CalendarIcon, ClockIcon, ChartBarIcon, LockClosedIcon, DocumentTextIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import { Election } from '../lib/web3';
+import { useLanguage } from '../../../contexts/LanguageContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 type DashboardUser = {
   id: string;
@@ -17,6 +19,8 @@ export default function AdminDashboard() {
   const [elections, setElections] = useState<Election[]>([]);
   const [pendingUsers, setPendingUsers] = useState<DashboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+  const { translate, currentLanguage } = useLanguage();
 
   useEffect(() => {
     const initAdmin = async () => {
@@ -28,6 +32,39 @@ export default function AdminDashboard() {
       initAdmin();
     }, 800);
   }, []);
+
+  useEffect(() => {
+    translatePageContent();
+  }, [currentLanguage]);
+
+  const translatePageContent = async () => {
+    const textsToTranslate = {
+      title: 'Admin Dashboard',
+      subtitle: 'Manage your blockchain voting platform',
+      loadingText: 'Loading dashboard...',
+      adminAccess: 'Admin access granted with hardcoded address:',
+      devModeTitle: 'Development Mode Active',
+      devModeDesc: 'Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.',
+      verifyVoters: 'Verify Voters',
+      verifyVotersDesc: 'Approve voter registrations and verify identity documents',
+      scheduleElections: 'Schedule Elections',
+      scheduleElectionsDesc: 'Create and manage elections, schedule dates and times',
+      statistics: 'Statistics',
+      statisticsDesc: 'View detailed voter demographics and platform statistics',
+      activityLogs: 'Activity Logs',
+      activityLogsDesc: 'Review all admin actions and system activity',
+      pendingVerification: 'Pending Verification',
+      pendingVerificationDesc: 'Manage queue of unverified voter registrations',
+      adminSettings: 'Admin Settings',
+      adminSettingsDesc: 'Manage blockchain connection and environment settings'
+    };
+
+    const translated: { [key: string]: string } = {};
+    for (const [key, text] of Object.entries(textsToTranslate)) {
+      translated[key] = await translate(text);
+    }
+    setTranslatedContent(translated);
+  };
 
   const loadDashboardData = async () => {
     // Load users
@@ -53,43 +90,43 @@ export default function AdminDashboard() {
 
   const adminModules = [
     {
-      title: 'Verify Voters',
-      description: 'Approve voter registrations and verify identity documents',
+      title: translatedContent.verifyVoters || 'Verify Voters',
+      description: translatedContent.verifyVotersDesc || 'Approve voter registrations and verify identity documents',
       icon: <UsersIcon className="h-8 w-8 text-blue-500" />,
       href: '/admin/verify-users',
       color: 'bg-blue-100 hover:bg-blue-200'
     },
     {
-      title: 'Schedule Elections',
-      description: 'Create and manage elections, schedule dates and times',
+      title: translatedContent.scheduleElections || 'Schedule Elections',
+      description: translatedContent.scheduleElectionsDesc || 'Create and manage elections, schedule dates and times',
       icon: <CalendarIcon className="h-8 w-8 text-indigo-500" />,
       href: '/admin/schedule-elections',
       color: 'bg-indigo-100 hover:bg-indigo-200'
     },
     {
-      title: 'Statistics',
-      description: 'View detailed voter demographics and platform statistics',
+      title: translatedContent.statistics || 'Statistics',
+      description: translatedContent.statisticsDesc || 'View detailed voter demographics and platform statistics',
       icon: <ChartBarIcon className="h-8 w-8 text-green-500" />,
       href: '/admin/statistics',
       color: 'bg-green-100 hover:bg-green-200'
     },
     {
-      title: 'Activity Logs',
-      description: 'Review all admin actions and system activity',
+      title: translatedContent.activityLogs || 'Activity Logs',
+      description: translatedContent.activityLogsDesc || 'Review all admin actions and system activity',
       icon: <DocumentTextIcon className="h-8 w-8 text-amber-500" />,
       href: '/admin/logs',
       color: 'bg-amber-100 hover:bg-amber-200'
     },
     {
-      title: 'Pending Verification',
-      description: 'Manage queue of unverified voter registrations',
+      title: translatedContent.pendingVerification || 'Pending Verification',
+      description: translatedContent.pendingVerificationDesc || 'Manage queue of unverified voter registrations',
       icon: <ClockIcon className="h-8 w-8 text-rose-500" />,
       href: '/admin/verify-users',
       color: 'bg-rose-100 hover:bg-rose-200'
     },
     {
-      title: 'Admin Settings',
-      description: 'Manage blockchain connection and environment settings',
+      title: translatedContent.adminSettings || 'Admin Settings',
+      description: translatedContent.adminSettingsDesc || 'Manage blockchain connection and environment settings',
       icon: <ShieldCheckIcon className="h-8 w-8 text-purple-500" />,
       href: '/admin/settings',
       color: 'bg-purple-100 hover:bg-purple-200'
@@ -107,12 +144,21 @@ export default function AdminDashboard() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-6 sm:mb-8 text-center"
+        className="mb-6 sm:mb-8"
       >
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-2 text-base sm:text-lg text-gray-600 px-4 sm:px-0">
-          Manage your blockchain voting platform
-        </p>
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-center flex-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">
+              {translatedContent.title || 'Admin Dashboard'}
+            </h1>
+            <p className="mt-2 text-base sm:text-lg text-gray-600 px-4 sm:px-0">
+              {translatedContent.subtitle || 'Manage your blockchain voting platform'}
+            </p>
+          </div>
+          <div className="ml-4">
+            <LanguageSelector />
+          </div>
+        </div>
       </motion.div>
 
       {loading ? (
@@ -124,7 +170,9 @@ export default function AdminDashboard() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-            <p className="mt-4 text-sm sm:text-base text-gray-600 animate-pulse">Loading dashboard...</p>
+            <p className="mt-4 text-sm sm:text-base text-gray-600 animate-pulse">
+              {translatedContent.loadingText || 'Loading dashboard...'}
+            </p>
           </div>
         </div>
       ) : (
@@ -144,7 +192,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="ml-3">
                   <p className="text-xs sm:text-sm text-green-700 break-all sm:break-normal">
-                    Admin access granted with hardcoded address: {adminService.getAdminAddress()}
+                    {translatedContent.adminAccess || 'Admin access granted with hardcoded address:'} {adminService.getAdminAddress()}
                   </p>
                 </div>
               </div>
@@ -186,12 +234,12 @@ export default function AdminDashboard() {
                 </div>
                 <div className="ml-3">
                   <p className="text-xs sm:text-sm text-gray-700 font-medium">
-                    Development Mode Active
+                    {translatedContent.devModeTitle || 'Development Mode Active'}
                   </p>
                 </div>
               </div>
               <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.
+                {translatedContent.devModeDesc || 'Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.'}
               </p>
             </motion.div>
           )}

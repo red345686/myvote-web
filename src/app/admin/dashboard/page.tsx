@@ -14,11 +14,14 @@ import {
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import type { AdminStats } from '../../lib/api';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+  const { translate, currentLanguage } = useLanguage();
 
   useEffect(() => {
     const initAdmin = async () => {
@@ -30,6 +33,50 @@ export default function AdminDashboard() {
       initAdmin();
     }, 800);
   }, []);
+
+  useEffect(() => {
+    translatePageContent();
+  }, [currentLanguage]);
+
+  const translatePageContent = async () => {
+    const textsToTranslate = {
+      title: 'Admin Dashboard',
+      subtitle: 'Overview of the voting platform statistics',
+      refreshData: 'Refresh Data',
+      loading: 'Loading...',
+      loadingStats: 'Loading statistics...',
+      adminAccess: 'Admin access granted with hardcoded address:',
+      totalVoters: 'Total Voters',
+      verifiedVoters: 'Verified Voters',
+      pendingVerification: 'Pending Verification',
+      verificationRate: 'Verification Rate',
+      genderDistribution: 'Gender Distribution',
+      stateDistribution: 'State Distribution',
+      male: 'Male',
+      female: 'Female',
+      other: 'Other',
+      state: 'State',
+      total: 'Total',
+      percentage: 'Percentage',
+      newRegistrations: 'new registrations today',
+      verifications: 'verifications today',
+      viewPending: 'View pending verifications',
+      verifyUsers: 'Verify Users',
+      scheduleElections: 'Schedule Elections',
+      activityLogs: 'Activity Logs',
+      verifyUsersDesc: 'Approve new voter registrations',
+      scheduleElectionsDesc: 'Create and manage elections',
+      activityLogsDesc: 'View recent admin activities',
+      noStateData: 'No state distribution data available',
+      genderNotAvailable: 'Gender distribution data is not available.'
+    };
+
+    const translated: { [key: string]: string } = {};
+    for (const [key, text] of Object.entries(textsToTranslate)) {
+      translated[key] = await translate(text);
+    }
+    setTranslatedContent(translated);
+  };
 
   const loadStats = async () => {
     try {
@@ -94,7 +141,7 @@ export default function AdminDashboard() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-2xl font-semibold text-gray-900"
           >
-            Admin Dashboard
+            {translatedContent.title || 'Admin Dashboard'}
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: -10 }}
@@ -102,7 +149,7 @@ export default function AdminDashboard() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-2 text-sm text-gray-700"
           >
-            Overview of the voting platform statistics
+            {translatedContent.subtitle || 'Overview of the voting platform statistics'}
           </motion.p>
         </div>
 
@@ -122,14 +169,14 @@ export default function AdminDashboard() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Loading...
+                {translatedContent.loading || 'Loading...'}
               </>
             ) : (
               <>
                 <svg className="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Refresh Data
+                {translatedContent.refreshData || 'Refresh Data'}
               </>
             )}
           </button>
@@ -151,7 +198,7 @@ export default function AdminDashboard() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-green-700">
-                Admin access granted with hardcoded address: {adminService.getAdminAddress()}
+                {translatedContent.adminAccess} {adminService.getAdminAddress()}
               </p>
             </div>
           </div>
@@ -189,7 +236,7 @@ export default function AdminDashboard() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             </div>
-            <p className="mt-4 text-gray-600 animate-pulse">Loading statistics...</p>
+            <p className="mt-4 text-gray-600 animate-pulse">{translatedContent.loadingStats || 'Loading statistics...'}</p>
           </div>
         </div>
       ) : (
@@ -207,10 +254,10 @@ export default function AdminDashboard() {
                   <UserGroupIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium text-gray-600">Total Voters</p>
+                  <p className="mb-2 text-sm font-medium text-gray-600">{translatedContent.totalVoters || 'Total Voters'}</p>
                   <p className="text-lg font-semibold text-gray-700">{getTotalVoters()}</p>
                   <p className="text-xs text-blue-500">
-                    {stats.dailyRegistrations || 0} new registrations today
+                    {stats.dailyRegistrations || 0} {translatedContent.newRegistrations}
                   </p>
                 </div>
               </motion.div>
@@ -226,7 +273,7 @@ export default function AdminDashboard() {
                   <CheckBadgeIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium text-gray-600">Verified Voters</p>
+                  <p className="mb-2 text-sm font-medium text-gray-600">{translatedContent.verifiedVoters || 'Verified Voters'}</p>
                   <p className="text-lg font-semibold text-gray-700">
                     {getVerifiedVoters()}
                     <span className="ml-2 text-sm font-normal text-green-500">
@@ -234,7 +281,7 @@ export default function AdminDashboard() {
                     </span>
                   </p>
                   <p className="text-xs text-green-500">
-                    {stats.dailyVerifications || 0} verifications today
+                    {stats.dailyVerifications || 0} {translatedContent.verifications}
                   </p>
                 </div>
               </motion.div>
@@ -250,9 +297,9 @@ export default function AdminDashboard() {
                   <ClockIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium text-gray-600">Pending Verification</p>
+                  <p className="mb-2 text-sm font-medium text-gray-600">{translatedContent.pendingVerification || 'Pending Verification'}</p>
                   <p className="text-lg font-semibold text-gray-700">{getPendingVerification()}</p>
-                  <p className="text-xs text-amber-500">View pending verifications</p>
+                  <p className="text-xs text-amber-500">{translatedContent.viewPending}</p>
                 </div>
               </motion.div>
 
@@ -267,7 +314,7 @@ export default function AdminDashboard() {
                   <ChartBarIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium text-gray-600">Verification Rate</p>
+                  <p className="mb-2 text-sm font-medium text-gray-600">{translatedContent.verificationRate || 'Verification Rate'}</p>
                   <p className="text-lg font-semibold text-gray-700">
                     {getTotalVoters() > 0
                       ? `${((getVerifiedVoters() / getTotalVoters()) * 100).toFixed(1)}%`
@@ -300,16 +347,16 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-semibold text-gray-800 flex items-center">
                     <UserIcon className="h-5 w-5 mr-2 text-blue-500" />
-                    Gender Distribution
+                    {translatedContent.genderDistribution || 'Gender Distribution'}
                   </h2>
                 </div>
 
                 <div className="flex flex-col">
                   {stats.maleVoters !== undefined && stats.femaleVoters !== undefined && stats.otherGenderVoters !== undefined ? (
                     [
-                      { gender: 'Male', count: stats.maleVoters, color: 'bg-blue-600' },
-                      { gender: 'Female', count: stats.femaleVoters, color: 'bg-pink-500' },
-                      { gender: 'Other', count: stats.otherGenderVoters, color: 'bg-purple-500' }
+                      { gender: translatedContent.male || 'Male', count: stats.maleVoters, color: 'bg-blue-600' },
+                      { gender: translatedContent.female || 'Female', count: stats.femaleVoters, color: 'bg-pink-500' },
+                      { gender: translatedContent.other || 'Other', count: stats.otherGenderVoters, color: 'bg-purple-500' }
                     ].map(({ gender, count, color }, index) => (
                       <div key={gender} className={index < 2 ? "mb-4" : ""}>
                         <div className="flex justify-between items-center mb-1">
@@ -331,7 +378,7 @@ export default function AdminDashboard() {
                     ))
                   ) : (
                     <div className="text-center text-sm text-gray-500 py-4">
-                      Gender distribution data is not available.
+                      {translatedContent.genderNotAvailable}
                     </div>
                   )}
                 </div>
@@ -347,7 +394,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-semibold text-gray-800 flex items-center">
                     <MapPinIcon className="h-5 w-5 mr-2 text-green-500" />
-                    State Distribution
+                    {translatedContent.stateDistribution || 'State Distribution'}
                   </h2>
                 </div>
 
@@ -356,9 +403,9 @@ export default function AdminDashboard() {
                     <table className="min-w-full">
                       <thead>
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">State</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{translatedContent.state || 'State'}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{translatedContent.total || 'Total'}</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{translatedContent.percentage || 'Percentage'}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -375,7 +422,7 @@ export default function AdminDashboard() {
                     </table>
                   ) : (
                     <div className="text-center text-sm text-gray-500 py-4">
-                      No state distribution data available
+                      {translatedContent.noStateData}
                     </div>
                   )}
                 </div>
@@ -395,8 +442,8 @@ export default function AdminDashboard() {
                 <CheckBadgeIcon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-gray-800 font-medium">Verify Users</h3>
-                <p className="text-gray-500 text-sm">Approve new voter registrations</p>
+                <h3 className="text-gray-800 font-medium">{translatedContent.verifyUsers || 'Verify Users'}</h3>
+                <p className="text-gray-500 text-sm">{translatedContent.verifyUsersDesc || 'Approve new voter registrations'}</p>
               </div>
             </Link>
 
@@ -405,8 +452,8 @@ export default function AdminDashboard() {
                 <CalendarDaysIcon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-gray-800 font-medium">Schedule Elections</h3>
-                <p className="text-gray-500 text-sm">Create and manage elections</p>
+                <h3 className="text-gray-800 font-medium">{translatedContent.scheduleElections || 'Schedule Elections'}</h3>
+                <p className="text-gray-500 text-sm">{translatedContent.scheduleElectionsDesc || 'Create and manage elections'}</p>
               </div>
             </Link>
 
@@ -415,8 +462,8 @@ export default function AdminDashboard() {
                 <ChartBarIcon className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-gray-800 font-medium">Activity Logs</h3>
-                <p className="text-gray-500 text-sm">View recent admin activities</p>
+                <h3 className="text-gray-800 font-medium">{translatedContent.activityLogs || 'Activity Logs'}</h3>
+                <p className="text-gray-500 text-sm">{translatedContent.activityLogsDesc || 'View recent admin activities'}</p>
               </div>
             </Link>
           </motion.div>

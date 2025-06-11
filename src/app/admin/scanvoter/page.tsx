@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Html5QrcodeScanner, Html5QrcodeScanType, Html5Qrcode } from 'html5-qrcode';
+import { useLanguage } from '../../../../contexts/LanguageContext';
 
 export default function ScanVoterPage() {
     const [scanResult, setScanResult] = useState<string>('');
@@ -11,6 +12,8 @@ export default function ScanVoterPage() {
     const [scanMode, setScanMode] = useState<'camera' | 'file'>('camera');
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
+    const { translate, currentLanguage } = useLanguage();
 
     useEffect(() => {
         if (scanMode === 'camera') {
@@ -20,6 +23,35 @@ export default function ScanVoterPage() {
             cleanupScanner();
         };
     }, [scanMode]);
+
+    useEffect(() => {
+        translatePageContent();
+    }, [currentLanguage]);
+
+    const translatePageContent = async () => {
+        const textsToTranslate = {
+            title: 'QR Code Vote Scanner',
+            cameraScan: 'Camera Scan',
+            uploadImage: 'Upload Image',
+            uploadQrCodeImage: 'Upload QR Code Image',
+            clickToSelect: 'Click to select an image file containing a QR code',
+            processingVote: 'Processing vote...',
+            readingQrCode: 'Reading QR code from image...',
+            scannedData: 'Scanned Data:',
+            resetScanner: 'Reset Scanner',
+            voteSubmittedSuccess: 'Vote submitted successfully!',
+            failedToSubmit: 'Failed to submit vote. Please try again.',
+            networkError: 'Network error. Please check your connection.',
+            couldNotReadQr: 'Could not read QR code from image. Please try a clearer image.',
+            scannerError: 'Scanner error:'
+        };
+
+        const translated: { [key: string]: string } = {};
+        for (const [key, text] of Object.entries(textsToTranslate)) {
+            translated[key] = await translate(text);
+        }
+        setTranslatedContent(translated);
+    };
 
     const initializeCamera = () => {
         const scanner = new Html5QrcodeScanner(
@@ -63,7 +95,7 @@ export default function ScanVoterPage() {
             const decodedText = await html5QrCode.scanFile(file, true);
             onScanSuccess(decodedText);
         } catch (error) {
-            setMessage('Could not read QR code from image. Please try a clearer image.');
+            setMessage(translatedContent.couldNotReadQr || 'Could not read QR code from image. Please try a clearer image.');
             setMessageType('error');
         } finally {
             setIsLoading(false);
@@ -90,14 +122,14 @@ export default function ScanVoterPage() {
 
             if (response.ok) {
                 const result = await response.json();
-                setMessage('Vote submitted successfully!');
+                setMessage(translatedContent.voteSubmittedSuccess || 'Vote submitted successfully!');
                 setMessageType('success');
             } else {
-                setMessage('Failed to submit vote. Please try again.');
+                setMessage(translatedContent.failedToSubmit || 'Failed to submit vote. Please try again.');
                 setMessageType('error');
             }
         } catch (error) {
-            setMessage('Network error. Please check your connection.');
+            setMessage(translatedContent.networkError || 'Network error. Please check your connection.');
             setMessageType('error');
         } finally {
             setIsLoading(false);
@@ -107,7 +139,7 @@ export default function ScanVoterPage() {
     const onScanFailure = (error: string) => {
         if (!error.includes('NotFoundException') && !error.includes('No MultiFormat Readers')) {
             console.log('Scan failed:', error);
-            setMessage('Scanner error: ' + error);
+            setMessage(translatedContent.scannerError + ' ' + error);
             setMessageType('error');
         }
     };
@@ -129,7 +161,7 @@ export default function ScanVoterPage() {
 
     return (
         <div className="container mx-auto p-6 max-w-2xl">
-            <h1 className="text-3xl font-bold text-center mb-8">QR Code Vote Scanner</h1>
+            <h1 className="text-3xl font-bold text-center mb-8">{translatedContent.title || 'QR Code Vote Scanner'}</h1>
 
             <div className="bg-white rounded-lg shadow-lg p-6">
                 {/* Mode Toggle */}
@@ -137,20 +169,20 @@ export default function ScanVoterPage() {
                     <button
                         onClick={() => switchScanMode('camera')}
                         className={`flex-1 py-2 px-4 rounded-md transition-colors ${scanMode === 'camera'
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-600 hover:text-gray-800'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-600 hover:text-gray-800'
                             }`}
                     >
-                        📷 Camera Scan
+                        📷 {translatedContent.cameraScan || 'Camera Scan'}
                     </button>
                     <button
                         onClick={() => switchScanMode('file')}
                         className={`flex-1 py-2 px-4 rounded-md transition-colors ${scanMode === 'file'
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-600 hover:text-gray-800'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-600 hover:text-gray-800'
                             }`}
                     >
-                        🖼️ Upload Image
+                        🖼️ {translatedContent.uploadImage || 'Upload Image'}
                     </button>
                 </div>
 
@@ -175,10 +207,10 @@ export default function ScanVoterPage() {
                             >
                                 <div className="text-4xl mb-4">📁</div>
                                 <div className="text-lg font-medium text-gray-700 mb-2">
-                                    Upload QR Code Image
+                                    {translatedContent.uploadQrCodeImage || 'Upload QR Code Image'}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                    Click to select an image file containing a QR code
+                                    {translatedContent.clickToSelect || 'Click to select an image file containing a QR code'}
                                 </div>
                             </label>
                         </div>
@@ -189,7 +221,10 @@ export default function ScanVoterPage() {
                     <div className="text-center mb-4">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                         <p className="mt-2 text-gray-600">
-                            {scanMode === 'camera' ? 'Processing vote...' : 'Reading QR code from image...'}
+                            {scanMode === 'camera'
+                                ? (translatedContent.processingVote || 'Processing vote...')
+                                : (translatedContent.readingQrCode || 'Reading QR code from image...')
+                            }
                         </p>
                     </div>
                 )}
@@ -205,7 +240,7 @@ export default function ScanVoterPage() {
 
                 {scanResult && (
                     <div className="mb-4">
-                        <h3 className="font-semibold mb-2">Scanned Data:</h3>
+                        <h3 className="font-semibold mb-2">{translatedContent.scannedData || 'Scanned Data:'}</h3>
                         <p className="bg-gray-100 p-3 rounded border break-all">{scanResult}</p>
                     </div>
                 )}
@@ -215,7 +250,7 @@ export default function ScanVoterPage() {
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
                     disabled={isLoading}
                 >
-                    Reset Scanner
+                    {translatedContent.resetScanner || 'Reset Scanner'}
                 </button>
             </div>
         </div>
