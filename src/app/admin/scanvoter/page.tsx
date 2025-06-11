@@ -40,7 +40,7 @@ export default function ScanVoterPage() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ data: decodedText }),
+                body: JSON.stringify({ qrData: decodedText }),
             });
 
             if (response.ok) {
@@ -86,8 +86,8 @@ export default function ScanVoterPage() {
 
                 {message && (
                     <div className={`p-4 rounded-lg mb-4 ${messageType === 'success'
-                            ? 'bg-green-100 text-green-700 border border-green-300'
-                            : 'bg-red-100 text-red-700 border border-red-300'
+                        ? 'bg-green-100 text-green-700 border border-green-300'
+                        : 'bg-red-100 text-red-700 border border-red-300'
                         }`}>
                         {message}
                     </div>
