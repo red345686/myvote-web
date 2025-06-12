@@ -42,7 +42,7 @@ export default function AdminDashboard() {
       title: 'Admin Dashboard',
       subtitle: 'Manage your blockchain voting platform',
       loadingText: 'Loading dashboard...',
-      adminAccess: 'Admin access granted with hardcoded address:',
+      adminAccess: 'Admin access granted - Welcome to the admin dashboard',
       devModeTitle: 'Development Mode Active',
       devModeDesc: 'Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.',
       verifyVoters: 'Verify Voters',
@@ -56,7 +56,11 @@ export default function AdminDashboard() {
       pendingVerification: 'Pending Verification',
       pendingVerificationDesc: 'Manage queue of unverified voter registrations',
       adminSettings: 'Admin Settings',
-      adminSettingsDesc: 'Manage blockchain connection and environment settings'
+      adminSettingsDesc: 'Manage blockchain connection and environment settings',
+      scanVoter: 'Scan Voter',
+      scanVoterDesc: 'Scan voter ID or QR code for quick verification and check-in',
+      legislature: 'Legislature',
+      legislatureDesc: 'Manage legislative positions, candidates, and parliamentary elections'
     };
 
     const translated: { [key: string]: string } = {};
@@ -102,6 +106,28 @@ export default function AdminDashboard() {
       icon: <CalendarIcon className="h-8 w-8 text-indigo-500" />,
       href: '/admin/schedule-elections',
       color: 'bg-indigo-100 hover:bg-indigo-200'
+    },
+    {
+      title: translatedContent.scanVoter || 'Scan Voter',
+      description: translatedContent.scanVoterDesc || 'Scan voter ID or QR code for quick verification and check-in',
+      icon: (
+        <svg className="h-8 w-8 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V6a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1zm12 0h2a1 1 0 001-1V6a1 1 0 00-1-1h-2a1 1 0 00-1 1v1a1 1 0 001 1zM5 20h2a1 1 0 001-1v-1a1 1 0 00-1-1H5a1 1 0 00-1 1v1a1 1 0 001 1z" />
+        </svg>
+      ),
+      href: '/admin/scanvoter',
+      color: 'bg-cyan-100 hover:bg-cyan-200'
+    },
+    {
+      title: translatedContent.legislature || 'Legislature',
+      description: translatedContent.legislatureDesc || 'Manage legislative positions, candidates, and parliamentary elections',
+      icon: (
+        <svg className="h-8 w-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+      ),
+      href: '/admin/legislature',
+      color: 'bg-emerald-100 hover:bg-emerald-200'
     },
     {
       title: translatedContent.statistics || 'Statistics',
@@ -192,7 +218,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="ml-3">
                   <p className="text-xs sm:text-sm text-green-700 break-all sm:break-normal">
-                    {translatedContent.adminAccess || 'Admin access granted with hardcoded address:'} {adminService.getAdminAddress()}
+                    {translatedContent.adminAccess || 'Admin access granted - Welcome to the admin dashboard'}
                   </p>
                 </div>
               </div>
