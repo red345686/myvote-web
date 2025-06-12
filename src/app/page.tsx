@@ -9,7 +9,7 @@ export default function Home() {
 
   useEffect(() => {
     // Redirect to admin dashboard
-    router.push('/login');
+    router.push('/Login');
   }, [router]);
 
   return (
