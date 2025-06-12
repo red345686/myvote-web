@@ -58,7 +58,7 @@ export default function AdminDashboard() {
       loadingText: 'Loading dashboard...',
       adminAccess: 'Admin access granted - Welcome to the admin dashboard',
       devModeTitle: 'Development Mode Active',
-      devModeDesc: 'Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.',
+      devModeDesc: 'Your application is running............',
       verifyVoters: 'Verify Voters',
       verifyVotersDesc: 'Approve voter registrations and verify identity documents',
       scheduleElections: 'Schedule Elections',
@@ -284,7 +284,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                {translatedContent.devModeDesc || 'Your application is running in development mode. Admin checks are bypassed and blockchain integration is simulated.'}
+                {translatedContent.devModeDesc || 'Your application is running.........'}
               </p>
             </motion.div>
           )}
