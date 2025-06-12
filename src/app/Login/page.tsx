@@ -159,7 +159,6 @@ export default function LoginPage() {
                         <div className="mt-4 text-center text-xs text-gray-500 space-y-1">
                             <p>✅ Only authorized email addresses from Firestore</p>
                             <p>❌ Unauthorized access blocked</p>
-                            <p className="text-blue-600">Demo: Any password works for authorized emails</p>
                         </div>
                     </div>
                 </motion.div>
