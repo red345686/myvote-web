@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; // Added setDoc
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -8,7 +8,8 @@ const firebaseConfig = {
     projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);
@@ -113,6 +114,64 @@ export const testFirestore = async () => {
         console.error('Firestore test failed:', error);
         return null;
     }
+};
+
+// Firebase Auth functions
+export const signInWithEmail = async (email: string, password: string) => {
+    try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        return result;
+    } catch (error) {
+        console.error('Error signing in:', error);
+        throw error;
+    }
+};
+
+export const signOutUser = async () => {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error('Error signing out:', error);
+        throw error;
+    }
+};
+
+// Check if user has admin claims
+export const checkAdminClaims = async () => {
+    const user = auth.currentUser;
+    if (!user) return false;
+
+    try {
+        // For development, check localStorage first
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+        if (isAdmin) return true;
+
+        // Try to get custom claims from Firebase
+        const tokenResult = await user.getIdTokenResult();
+        return tokenResult.claims.admin === true;
+    } catch (error) {
+        console.error('Error checking admin claims:', error);
+        // Fallback to localStorage for development
+        return localStorage.getItem('isAdmin') === 'true';
+    }
+};
+
+// Get Firebase ID token
+export const getIdToken = async () => {
+    const user = auth.currentUser;
+    if (!user) return null;
+
+    try {
+        return await user.getIdToken();
+    } catch (error) {
+        console.error('Error getting ID token:', error);
+        return null;
+    }
+};
+
+// Listen to auth state changes
+export const onAuthStateChange = (callback: (user: any) => void) => {
+    return onAuthStateChanged(auth, callback);
 };
 
 export default app;

@@ -98,12 +98,20 @@ export interface AdminStats {
  */
 class ApiService {
   private adminAddress: string | null = null;
+  private firebaseToken: string | null = null;
 
   /**
    * Set the admin address for making administrative API calls
    */
   setAdminAddress(address: string): void {
     this.adminAddress = address;
+  }
+
+  /**
+   * Set the Firebase token for authentication
+   */
+  setFirebaseToken(token: string): void {
+    this.firebaseToken = token;
   }
 
   /**
@@ -115,8 +123,13 @@ class ApiService {
       'Content-Type': 'application/json',
     };
 
-    if (isAdminRequest && this.adminAddress) {
-      headers['x-admin-address'] = this.adminAddress;
+    if (isAdminRequest) {
+      if (this.adminAddress) {
+        headers['x-admin-address'] = this.adminAddress;
+      }
+      if (this.firebaseToken) {
+        headers['Authorization'] = `Bearer ${this.firebaseToken}`;
+      }
     }
 
     return headers;

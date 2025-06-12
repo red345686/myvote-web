@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { adminService } from '../lib/admin-service';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { UsersIcon, CalendarIcon, ClockIcon, ChartBarIcon, LockClosedIcon, DocumentTextIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
@@ -19,19 +20,32 @@ export default function AdminDashboard() {
   const [elections, setElections] = useState<Election[]>([]);
   const [pendingUsers, setPendingUsers] = useState<DashboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const [translatedContent, setTranslatedContent] = useState<{ [key: string]: string }>({});
   const { translate, currentLanguage } = useLanguage();
+  const router = useRouter();
 
   useEffect(() => {
     const initAdmin = async () => {
-      await adminService.initialize();
-      loadDashboardData();
+      // Listen to auth state changes
+      adminService.onAuthStateChange(async (firebaseUser) => {
+        if (firebaseUser) {
+          const initialized = await adminService.initialize();
+          if (initialized) {
+            setUser(firebaseUser);
+            loadDashboardData();
+          } else {
+            router.push('/Login');
+          }
+        } else {
+          router.push('/Login');
+        }
+        setLoading(false);
+      });
     };
 
-    setTimeout(() => {
-      initAdmin();
-    }, 800);
-  }, []);
+    initAdmin();
+  }, [router]);
 
   useEffect(() => {
     translatePageContent();
@@ -158,6 +172,11 @@ export default function AdminDashboard() {
       color: 'bg-purple-100 hover:bg-purple-200'
     },
   ];
+
+  const handleLogout = async () => {
+    await adminService.logout();
+    router.push('/Login');
+  };
 
   return (
     <motion.div
